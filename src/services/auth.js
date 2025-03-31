@@ -15,10 +15,13 @@ export class AuthService {
         const user = mockUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
         
         if (user) {
-            // In a real app, we would validate the password here
-            // For demo purposes, we'll just log the user in
-            localStorage.setItem('user', JSON.stringify(user));
-            return { success: true, user };
+            // Validate the password
+            if (user.password === password) {
+                localStorage.setItem('user', JSON.stringify(user));
+                return { success: true, user };
+            } else {
+                return { success: false, message: 'Invalid email or password' };
+            }
         } else {
             return { success: false, message: 'Invalid email or password' };
         }
@@ -32,12 +35,18 @@ export class AuthService {
             return { success: false, message: 'Email is already in use' };
         }
         
+        // Validate the password
+        if (!this.isValidPassword(userData.password)) {
+            return { success: false, message: 'Password does not meet the requirements' };
+        }
+        
         // In a real app, we would add the user to the database
         // For demo purposes, we'll just log the user in
         const newUser = {
             id: Date.now(),
             name: userData.name,
             email: userData.email,
+            password: userData.password,
             favoriteStores: [],
             recentOrders: [],
             role: 'buyer'
@@ -106,5 +115,11 @@ export class AuthService {
         localStorage.setItem('user', JSON.stringify(user));
         
         return { success: true, user };
+    }
+
+    static isValidPassword(password) {
+        // Add your password validation logic here
+        // For example, check if the password is at least 8 characters long
+        return password.length >= 8;
     }
 }

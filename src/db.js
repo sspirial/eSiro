@@ -9,8 +9,13 @@ db.version(2).stores({
     realms: '@realmId'
 });
 
+const databaseUrl = import.meta.env.VITE_DATABASE_URL;
+if (!databaseUrl) {
+    throw new Error("VITE_DATABASE_URL is not defined in the environment variables.");
+}
+
 db.cloud.configure({
-    databaseUrl: import.meta.env.VITE_DATABASE_URL,
+    databaseUrl: databaseUrl,
     requireAuth: true,
     onAuthSuccess: async () => {
         await insertMockData();
