@@ -55,7 +55,7 @@ export default class EsiroHeader extends HTMLElement {
                     ${isLoggedIn ? `<span class="user-avatar">${user.name.charAt(0)}</span>` : '👤'}
                 </a>
             </div>
-        </div>
+        </header>
         <style>
             header {
                 display: flex;
@@ -184,7 +184,6 @@ export default class EsiroHeader extends HTMLElement {
 
         this.handleCartClick = (e) => {
             e.preventDefault();
-
             document.querySelector('esiro-network').showSection('cart');
         };
 

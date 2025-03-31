@@ -72,47 +72,6 @@ export default class EsiroMain extends HTMLElement {
                 <h2>Your Cart</h2>
                 <esiro-cart></esiro-cart>
             </section>
-        </main>
-        <style>
-            :host {
-                display: block;
-                width: 100%;
-                height: 100%;
-            }
-            
-            main {
-                width: 100%;
-                height: 100%;
-                overflow-y: auto;
-                padding: 20px;
-                box-sizing: border-box;
-            }
-
-            section {
-                width: 100%;
-                box-sizing: border-box;
-                padding-bottom: 20px;
-            }
-
-            .product-grid, .store-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-                gap: 20px;
-                width: 100%;
-                box-sizing: border-box;
-            }
-
-            @media (max-width: 768px) {
-                main {
-                    padding: 15px;
-                    padding-bottom: 75px; /* Ensure bottom content isn't hidden behind nav */
-                }
-                
-                .product-grid, .store-grid {
-                    grid-template-columns: 1fr;
-                    gap: 15px;
-                }
-            }
-        </style>`;
+        </main>`;
     }
 }
