@@ -1,14 +1,15 @@
 export class ThemeService {
     static init() {
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        document.documentElement.setAttribute('data-theme', savedTheme);
+        const savedTheme = localStorage.getItem('theme') || 
+                          (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        this.setTheme(savedTheme);
     }
 
     static toggleTheme() {
-        const current = document.documentElement.getAttribute('data-theme');
+        const current = document.documentElement.getAttribute('data-theme') || 'light';
         const newTheme = current === 'light' ? 'dark' : 'light';
-        document.documentElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('theme', newTheme);
+        this.setTheme(newTheme);
+        return newTheme;
     }
 
     static setTheme(theme) {
@@ -18,5 +19,8 @@ export class ThemeService {
         }
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem('theme', theme);
+        
+        // Dispatch event for components to react
+        window.dispatchEvent(new CustomEvent('themechange', { detail: { theme } }));
     }
 }

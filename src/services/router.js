@@ -28,42 +28,36 @@ export class RouterService {
         }
     }
 
-    static async navigateToSection(section) {
+    static navigateToSection(section) {
+        const esiroNetwork = document.querySelector('esiro-network');
+        if (!esiroNetwork?.shadowRoot) return;
+        
+        const esiroMain = esiroNetwork.shadowRoot.querySelector('esiro-main');
+        if (!esiroMain?.shadowRoot) return;
+        
+        const mainContent = esiroMain.shadowRoot.querySelector('main');
+        if (!mainContent) return;
+        
+        this.handleRoute(section, mainContent);
+    }
+
+    static handleRoute(section, mainContent) {
+        if (!mainContent) return;
+        
         try {
-            // Get the esiro-main element
-            const esiroMain = document.querySelector('esiro-main');
-            if (!esiroMain) {
-                console.error('esiro-main element not found');
-                return;
+            // Hide all sections first
+            const sections = mainContent.querySelectorAll('section');
+            if (sections) {
+                sections.forEach(s => s.classList.add('hidden'));
             }
 
-            // Wait for shadow DOM to be initialized
-            if (!esiroMain.shadowRoot) {
-                console.error('Shadow DOM not initialized for esiro-main element');
-                return;
-            }
-
-            // Get the main element within esiro-main's shadow DOM
-            const main = esiroMain.shadowRoot.querySelector('main');
-            if (!main) {
-                console.error('Main element not found in esiro-main');
-                return;
-            }
-
-            // Hide all sections
-            const sections = main.querySelectorAll('section');
-            sections.forEach(sec => sec.classList.add('hidden'));
-
-            // Show the target section
-            const targetSection = main.querySelector(`#${section}`);
+            // Show target section
+            const targetSection = mainContent.querySelector(`#${section}`);
             if (targetSection) {
                 targetSection.classList.remove('hidden');
-                console.log(`Navigated to section: ${section}`);
-            } else {
-                console.error(`Section with id ${section} not found`);
             }
         } catch (error) {
-            console.error('Error navigating to section:', error);
+            console.error('Error in handleRoute:', error);
         }
     }
 }

@@ -37,8 +37,8 @@ export default class EsiroHeader extends HTMLElement {
 
         this.shadowRoot.innerHTML = `
         <header>
-            <a href="#" id="logo">
-                <img src="./eSiro-app-logo.png" alt="eSiro logo" class="logo-img">
+            <a href="/eSiro" id="logo">
+                <img src="/eSiro/eSiro-app-logo.png" alt="eSiro logo" class="logo-img">
             </a>
             <div class="search-container">
                 <span class="search-icon">🔍</span>
@@ -65,12 +65,11 @@ export default class EsiroHeader extends HTMLElement {
                 background: var(--background);
                 box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             }
-            .logo-img {
-                height: 32px;
-                transition: transform var(--transition-speed);
-            }
-            .logo-img:hover {
-                transform: scale(1.05);
+            .logo-text {
+                font-size: 24px;
+                font-weight: bold;
+                color: var(--text-primary);
+                text-decoration: none;
             }
             .search-container {
                 position: relative;
@@ -145,6 +144,13 @@ export default class EsiroHeader extends HTMLElement {
                 font-weight: bold;
                 font-size: 16px;
             }
+            .logo-img {
+                height: 32px;
+                transition: transform var(--transition-speed);
+            }
+            .logo-img:hover {
+                transform: scale(1.05);
+            }
             @media (max-width: 768px) {
                 .search-container {
                     display: none;
@@ -162,11 +168,7 @@ export default class EsiroHeader extends HTMLElement {
 
         this.handleLogoClick = (e) => {
             e.preventDefault();
-            if (AuthService.isLoggedIn()) {
-                RouterService.navigate('/personal-home');
-            } else {
-                RouterService.navigate('/');
-            }
+            window.location.href = '/eSiro/';
         };
 
         this.handleAccountClick = (e) => {
@@ -175,8 +177,9 @@ export default class EsiroHeader extends HTMLElement {
         };
 
         this.handleThemeToggle = () => {
-            ThemeService.toggleTheme();
-            this.render(); // Re-render to update theme icon
+            this.dispatchEvent(new CustomEvent('navigation', {
+                detail: { destination: 'theme' }
+            }));
         };
 
         this.handleCartClick = (e) => {
