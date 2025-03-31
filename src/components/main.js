@@ -16,6 +16,13 @@ export default class EsiroMain extends HTMLElement {
 
     connectedCallback() {
         this.render();
+        // Ensure initial visibility - show stores by default
+        setTimeout(() => {
+            const storesSection = this.shadowRoot.querySelector('#stores');
+            if (storesSection) {
+                storesSection.classList.remove('hidden');
+            }
+        }, 100);
     }
 
     disconnectedCallback() {
@@ -39,26 +46,30 @@ export default class EsiroMain extends HTMLElement {
                 grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
                 gap: 20px;
             }
+            section {
+                width: 100%;
+                height: 100%;
+            }
         </style>
         <main>
             <section id="stores" class="hidden">
+                <h2>Available Stores</h2>
                 <div class="grid">
-                    <esiro-store></esiro-store>
-                    <esiro-store></esiro-store>
-                    <esiro-store></esiro-store>
+                    <!-- Store components will be dynamically added here -->
                 </div>
             </section>
             <section id="products" class="hidden">
+                <h2>Available Products</h2>
                 <div class="grid">
-                    <esiro-product></esiro-product>
-                    <esiro-product></esiro-product>
-                    <esiro-product></esiro-product>
+                    <!-- Product components will be dynamically added here -->
                 </div>
             </section>
             <section id="data" class="hidden">
+                <h2>User Data</h2>
                 <esiro-table></esiro-table>
             </section>
             <section id="cart" class="hidden">
+                <h2>Your Cart</h2>
                 <esiro-cart></esiro-cart>
             </section>
         </main>`;
