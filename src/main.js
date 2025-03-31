@@ -9,6 +9,9 @@ import {
   EsiroCart,
 } from "./components/index.js";
 
+import { mockStores, mockProducts, mockUsers } from "./mock-data.js";
+import { RouterService } from "./services/router.js";
+
 export default class EsiroNetwork extends HTMLElement {
   constructor() {
     super();
@@ -175,10 +178,29 @@ export default class EsiroNetwork extends HTMLElement {
   }
 
   showSection(section) {
-    document
-      .querySelectorAll("main section")
-      .forEach((sec) => sec.classList.add("hidden"));
-    document.getElementById(section)?.classList.remove("hidden");
+    RouterService.navigateToSection(section);
+    this.showMockData(section);
+  }
+
+  showMockData(section) {
+    let data;
+    switch (section) {
+      case "stores":
+        data = mockStores;
+        break;
+      case "products":
+        data = mockProducts;
+        break;
+      case "data":
+        data = mockUsers;
+        break;
+      case "cart":
+        data = mockProducts; // Assuming cart contains products
+        break;
+      default:
+        data = [];
+    }
+    console.log(`Showing data for ${section}:`, data);
   }
 }
 

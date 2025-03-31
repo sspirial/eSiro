@@ -1,5 +1,6 @@
 import { AuthService } from '../services/auth.js';
 import { ThemeService } from '../services/theme.js';
+import { RouterService } from '../services/router.js';
 
 export default class EsiroHeader extends HTMLElement {
     constructor() {
@@ -23,7 +24,9 @@ export default class EsiroHeader extends HTMLElement {
     }
 
     disconnectedCallback() {
-        // Clean up any event listeners if added in the future
+        this.shadowRoot.querySelector('#logo').removeEventListener('click', this.handleLogoClick);
+        this.shadowRoot.querySelector('#account').removeEventListener('click', this.handleAccountClick);
+        this.shadowRoot.querySelector('#theme-toggle').removeEventListener('click', this.handleThemeToggle);
     }
 
     render() {
@@ -42,6 +45,9 @@ export default class EsiroHeader extends HTMLElement {
         </header>
         <style>
             header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
                 padding: 16px;
                 background: var(--background);
                 box-shadow: 0 2px 8px rgba(0,0,0,0.1);
@@ -57,6 +63,8 @@ export default class EsiroHeader extends HTMLElement {
                 position: relative;
                 display: flex;
                 align-items: center;
+                flex: 1;
+                margin: 0 16px;
             }
             .search-icon {
                 position: absolute;
@@ -65,6 +73,7 @@ export default class EsiroHeader extends HTMLElement {
                 pointer-events: none;
             }
             input {
+                width: 100%;
                 padding: 8px 8px 8px 40px;
                 border: 1px solid var(--text-secondary);
                 border-radius: var(--border-radius);
@@ -89,22 +98,26 @@ export default class EsiroHeader extends HTMLElement {
     }
 
     setupNavigation() {
-        this.shadowRoot.querySelector('#logo').addEventListener('click', (e) => {
+        this.handleLogoClick = (e) => {
             e.preventDefault();
             if (AuthService.isLoggedIn()) {
-                window.location.href = '/personal-home';
+                RouterService.navigate('/personal-home');
             } else {
-                window.location.href = '/';
+                RouterService.navigate('/');
             }
-        });
+        };
 
-        this.shadowRoot.querySelector('#account').addEventListener('click', (e) => {
+        this.handleAccountClick = (e) => {
             e.preventDefault();
-            window.location.href = '/account';
-        });
+            RouterService.navigate('/account');
+        };
 
-        this.shadowRoot.querySelector('#theme-toggle').addEventListener('click', () => {
+        this.handleThemeToggle = () => {
             ThemeService.toggleTheme();
-        });
+        };
+
+        this.shadowRoot.querySelector('#logo').addEventListener('click', this.handleLogoClick);
+        this.shadowRoot.querySelector('#account').addEventListener('click', this.handleAccountClick);
+        this.shadowRoot.querySelector('#theme-toggle').addEventListener('click', this.handleThemeToggle);
     }
 }

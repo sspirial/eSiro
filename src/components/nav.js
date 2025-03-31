@@ -39,6 +39,13 @@ export default class EsiroNav extends HTMLElement {
             </button>
         </nav>
         <style>
+            nav {
+                display: flex;
+                flex-direction: column;
+                width: 200px;
+                border-right: 1px solid #ccc;
+                padding: 10px;
+            }
             nav button {
                 display: flex;
                 align-items: center;
@@ -58,6 +65,11 @@ export default class EsiroNav extends HTMLElement {
             .nav-icon {
                 width: 20px;
                 height: 20px;
+            }
+            @media (max-width: 768px) {
+                nav {
+                    display: none;
+                }
             }
         </style>`;
     }

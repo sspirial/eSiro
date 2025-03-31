@@ -18,4 +18,14 @@ export class AuthService {
     static logout() {
         localStorage.removeItem('user');
     }
+
+    static isVendor() {
+        const user = this.getUser();
+        return user && user.role === 'vendor';
+    }
+
+    static isBuyer() {
+        const user = this.getUser();
+        return user && user.role === 'buyer';
+    }
 }

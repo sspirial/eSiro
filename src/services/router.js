@@ -32,4 +32,14 @@ export class RouterService {
                 main.innerHTML = '<esiro-home></esiro-home>';
         }
     }
+
+    static navigateToSection(section) {
+        const main = document.querySelector('main');
+        const sections = main.querySelectorAll('section');
+        sections.forEach(sec => sec.classList.add('hidden'));
+        const targetSection = main.querySelector(`#${section}`);
+        if (targetSection) {
+            targetSection.classList.remove('hidden');
+        }
+    }
 }

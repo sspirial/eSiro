@@ -1,4 +1,6 @@
 import { AuthService } from '../services/auth.js';
+import { mockUsers, mockStores, mockProducts } from '../mock-data.js';
+import { RouterService } from '../services/router.js';
 
 export class PersonalHomePage extends HTMLElement {
     constructor() {
@@ -19,7 +21,7 @@ export class PersonalHomePage extends HTMLElement {
     connectedCallback() {
         const user = AuthService.getUser();
         if (!user) {
-            window.location.href = '/account';
+            RouterService.navigate('/account');
             return;
         }
 
@@ -31,6 +33,9 @@ export class PersonalHomePage extends HTMLElement {
     }
 
     render(user) {
+        const recentOrders = this.getRecentOrders(user);
+        const favoriteStores = this.getFavoriteStores(user);
+
         this.shadowRoot.innerHTML = `
             <div class="personal-home">
                 <h1>Welcome back, ${user.name}</h1>
@@ -42,15 +47,13 @@ export class PersonalHomePage extends HTMLElement {
                     <div class="recent-orders">
                         <h2>Recent Orders</h2>
                         <div class="order-list">
-                            <!-- Placeholder for orders -->
-                            <p>No recent orders</p>
+                            ${recentOrders.length > 0 ? recentOrders.map(order => `<p>${order.name} - $${order.price}</p>`).join('') : '<p>No recent orders</p>'}
                         </div>
                     </div>
                     <div class="favorites">
                         <h2>Favorite Stores</h2>
                         <div class="store-list">
-                            <!-- Placeholder for favorite stores -->
-                            <p>No favorite stores yet</p>
+                            ${favoriteStores.length > 0 ? favoriteStores.map(store => `<p>${store.name} - ${store.location}</p>`).join('') : '<p>No favorite stores yet</p>'}
                         </div>
                     </div>
                 </div>
@@ -74,6 +77,14 @@ export class PersonalHomePage extends HTMLElement {
                     }
                 </style>
             </div>`;
+    }
+
+    getRecentOrders(user) {
+        return mockProducts.filter(product => user.recentOrders.includes(product.id));
+    }
+
+    getFavoriteStores(user) {
+        return mockStores.filter(store => user.favoriteStores.includes(store.id));
     }
 }
 

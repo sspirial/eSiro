@@ -1,3 +1,5 @@
+import { mockStores } from '../mock-data.js';
+
 export default class EsiroStore extends HTMLElement {
     constructor() {
         super();
@@ -24,6 +26,7 @@ export default class EsiroStore extends HTMLElement {
     }
 
     renderDefault() {
+        const store = mockStores.find(store => store.name === this.getAttribute('name'));
         this.shadowRoot.innerHTML = `
             <style>
                 .card {
@@ -33,14 +36,19 @@ export default class EsiroStore extends HTMLElement {
                     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
                 }
             </style>
-            <div class="card"><p>${this.getAttribute('name') || 'A store'}</p></div>
+            <div class="card">
+                <p>${store ? store.name : 'A store'}</p>
+                <p>${store ? store.location : ''}</p>
+            </div>
         `;
     }
 
     renderExpanded() {
+        const store = mockStores.find(store => store.name === this.getAttribute('name'));
         this.shadowRoot.innerHTML = `
             <h2>Store Details</h2>
-            <p>More details about ${this.getAttribute('name') || 'the store'}...</p>
+            <p>More details about ${store ? store.name : 'the store'}...</p>
+            <p>Location: ${store ? store.location : ''}</p>
             <button>Close</button>
         `;
         this.shadowRoot.querySelector("button").addEventListener("click", () => this.collapseStore());

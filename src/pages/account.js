@@ -1,4 +1,5 @@
 import { AuthService } from '../services/auth.js';
+import { RouterService } from '../services/router.js';
 
 export class AccountPage extends HTMLElement {
     constructor() {
@@ -23,7 +24,16 @@ export class AccountPage extends HTMLElement {
     }
 
     disconnectedCallback() {
-        // Clean up any event listeners if added in the future
+        const loginForm = this.shadowRoot.querySelector('#loginForm');
+        const logoutBtn = this.shadowRoot.querySelector('#logout');
+
+        if (loginForm) {
+            loginForm.removeEventListener('submit', this.handleLogin);
+        }
+
+        if (logoutBtn) {
+            logoutBtn.removeEventListener('click', this.handleLogout);
+        }
     }
 
     render(user) {
@@ -70,7 +80,26 @@ export class AccountPage extends HTMLElement {
                 <h2>Account Details</h2>
                 <p>Name: ${user.name}</p>
                 <p>Email: ${user.email}</p>
+                ${AuthService.isVendor() ? this.renderVendorContent() : this.renderBuyerContent()}
                 <button id="logout">Logout</button>
+            </div>`;
+    }
+
+    renderVendorContent() {
+        return `
+            <div class="vendor-content">
+                <h3>Vendor Dashboard</h3>
+                <p>Manage your store and products here.</p>
+                <!-- Add more vendor-specific content here -->
+            </div>`;
+    }
+
+    renderBuyerContent() {
+        return `
+            <div class="buyer-content">
+                <h3>Buyer Dashboard</h3>
+                <p>View your orders and favorite stores here.</p>
+                <!-- Add more buyer-specific content here -->
             </div>`;
     }
 
@@ -90,17 +119,20 @@ export class AccountPage extends HTMLElement {
         const logoutBtn = this.shadowRoot.querySelector('#logout');
 
         if (loginForm) {
-            loginForm.addEventListener('submit', (e) => {
+            this.handleLogin = (e) => {
                 e.preventDefault();
                 // Implement login logic here
-            });
+                RouterService.navigate('/personal-home');
+            };
+            loginForm.addEventListener('submit', this.handleLogin);
         }
 
         if (logoutBtn) {
-            logoutBtn.addEventListener('click', () => {
+            this.handleLogout = () => {
                 localStorage.removeItem('user');
-                window.location.reload();
-            });
+                RouterService.navigate('/');
+            };
+            logoutBtn.addEventListener('click', this.handleLogout);
         }
     }
 }
