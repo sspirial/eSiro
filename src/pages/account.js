@@ -1,9 +1,33 @@
 import { AuthService } from '../services/auth.js';
 
 export class AccountPage extends HTMLElement {
+    constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+    }
+
+    static get observedAttributes() {
+        return ['user'];
+    }
+
+    attributeChangedCallback(name, oldValue, newValue) {
+        if (oldValue !== newValue) {
+            this.render();
+        }
+    }
+
     connectedCallback() {
         const user = AuthService.getUser();
-        this.innerHTML = `
+        this.render(user);
+        this.setupEventListeners();
+    }
+
+    disconnectedCallback() {
+        // Clean up any event listeners if added in the future
+    }
+
+    render(user) {
+        this.shadowRoot.innerHTML = `
             <div class="account-page">
                 <h1>My Account</h1>
                 ${user ? this.renderUserAccount(user) : this.renderLogin()}
@@ -38,8 +62,6 @@ export class AccountPage extends HTMLElement {
                     }
                 </style>
             </div>`;
-        
-        this.setupEventListeners();
     }
 
     renderUserAccount(user) {
@@ -64,8 +86,8 @@ export class AccountPage extends HTMLElement {
     }
 
     setupEventListeners() {
-        const loginForm = this.querySelector('#loginForm');
-        const logoutBtn = this.querySelector('#logout');
+        const loginForm = this.shadowRoot.querySelector('#loginForm');
+        const logoutBtn = this.shadowRoot.querySelector('#logout');
 
         if (loginForm) {
             loginForm.addEventListener('submit', (e) => {

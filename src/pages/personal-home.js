@@ -1,6 +1,21 @@
 import { AuthService } from '../services/auth.js';
 
 export class PersonalHomePage extends HTMLElement {
+    constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+    }
+
+    static get observedAttributes() {
+        return ['user'];
+    }
+
+    attributeChangedCallback(name, oldValue, newValue) {
+        if (oldValue !== newValue) {
+            this.render();
+        }
+    }
+
     connectedCallback() {
         const user = AuthService.getUser();
         if (!user) {
@@ -8,7 +23,15 @@ export class PersonalHomePage extends HTMLElement {
             return;
         }
 
-        this.innerHTML = `
+        this.render(user);
+    }
+
+    disconnectedCallback() {
+        // Clean up any event listeners if added in the future
+    }
+
+    render(user) {
+        this.shadowRoot.innerHTML = `
             <div class="personal-home">
                 <h1>Welcome back, ${user.name}</h1>
                 <div class="dashboard">

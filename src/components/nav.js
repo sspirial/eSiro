@@ -1,10 +1,29 @@
 export default class EsiroNav extends HTMLElement {
+    constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+    }
+
+    static get observedAttributes() {
+        return ['section'];
+    }
+
+    attributeChangedCallback(name, oldValue, newValue) {
+        if (oldValue !== newValue) {
+            this.render();
+        }
+    }
+
     connectedCallback() {
         this.render();
     }
 
+    disconnectedCallback() {
+        // Clean up any event listeners if added in the future
+    }
+
     render() {
-        this.innerHTML = `
+        this.shadowRoot.innerHTML = `
         <nav>
             <button onclick="document.querySelector('esiro-network').showSection('stores')">
                 🏪 Stores

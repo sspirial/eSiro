@@ -2,13 +2,32 @@ import { AuthService } from '../services/auth.js';
 import { ThemeService } from '../services/theme.js';
 
 export default class EsiroHeader extends HTMLElement {
+    constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+    }
+
+    static get observedAttributes() {
+        return ['theme'];
+    }
+
+    attributeChangedCallback(name, oldValue, newValue) {
+        if (oldValue !== newValue) {
+            this.render();
+        }
+    }
+
     connectedCallback() {
         this.render();
         this.setupNavigation();
     }
 
+    disconnectedCallback() {
+        // Clean up any event listeners if added in the future
+    }
+
     render() {
-        this.innerHTML = `<header>
+        this.shadowRoot.innerHTML = `<header>
             <a href="#" id="logo">
                 <img src="./eSiro-app-logo.png" alt="eSiro logo" class="logo-img">
             </a>
@@ -70,7 +89,7 @@ export default class EsiroHeader extends HTMLElement {
     }
 
     setupNavigation() {
-        this.querySelector('#logo').addEventListener('click', (e) => {
+        this.shadowRoot.querySelector('#logo').addEventListener('click', (e) => {
             e.preventDefault();
             if (AuthService.isLoggedIn()) {
                 window.location.href = '/personal-home';
@@ -79,12 +98,12 @@ export default class EsiroHeader extends HTMLElement {
             }
         });
 
-        this.querySelector('#account').addEventListener('click', (e) => {
+        this.shadowRoot.querySelector('#account').addEventListener('click', (e) => {
             e.preventDefault();
             window.location.href = '/account';
         });
 
-        this.querySelector('#theme-toggle').addEventListener('click', () => {
+        this.shadowRoot.querySelector('#theme-toggle').addEventListener('click', () => {
             ThemeService.toggleTheme();
         });
     }

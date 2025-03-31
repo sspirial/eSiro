@@ -9,6 +9,11 @@ export class RouterService {
         this.handleRoute();
     }
 
+    static navigateTo(path) {
+        history.pushState({}, '', path);
+        this.handleRoute();
+    }
+
     static handleRoute() {
         const path = window.location.pathname;
         const main = document.querySelector('main');
