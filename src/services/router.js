@@ -27,4 +27,37 @@ export class RouterService {
                 main.innerHTML = '<esiro-home></esiro-home>';
         }
     }
+
+    static navigateToSection(section) {
+        const esiroNetwork = document.querySelector('esiro-network');
+        if (!esiroNetwork?.shadowRoot) return;
+        
+        const esiroMain = esiroNetwork.shadowRoot.querySelector('esiro-main');
+        if (!esiroMain?.shadowRoot) return;
+        
+        const mainContent = esiroMain.shadowRoot.querySelector('main');
+        if (!mainContent) return;
+        
+        this.handleRoute(section, mainContent);
+    }
+
+    static handleRoute(section, mainContent) {
+        if (!mainContent) return;
+        
+        try {
+            // Hide all sections first
+            const sections = mainContent.querySelectorAll('section');
+            if (sections) {
+                sections.forEach(s => s.classList.add('hidden'));
+            }
+
+            // Show target section
+            const targetSection = mainContent.querySelector(`#${section}`);
+            if (targetSection) {
+                targetSection.classList.remove('hidden');
+            }
+        } catch (error) {
+            console.error('Error in handleRoute:', error);
+        }
+    }
 }

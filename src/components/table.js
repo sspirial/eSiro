@@ -1,122 +1,121 @@
+import { mockUsers } from '../mock-data.js';
+
 export default class EsiroTable extends HTMLElement {
+    constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+    }
+
+    static get observedAttributes() {
+        return ['data-type'];
+    }
+
+    attributeChangedCallback(name, oldValue, newValue) {
+        if (oldValue !== newValue) {
+            this.render();
+        }
+    }
+
     connectedCallback() {
         this.render();
     }
 
+    disconnectedCallback() {
+        // Clean up any event listeners if added in the future
+    }
+
     render() {
-        this.innerHTML = `
-        <div class="table-container">
-            <h2>Sales Data</h2>
-            <table class="data-table">
+        const dataType = this.getAttribute('data-type') || 'users';
+        let tableContent = '';
+        
+        if (dataType === 'users') {
+            tableContent = this.renderUsersTable();
+        } else {
+            tableContent = '<p>No data available for this type</p>';
+        }
+        
+        this.shadowRoot.innerHTML = `
+            <style>
+                .table-container {
+                    width: 100%;
+                    overflow-x: auto;
+                }
+                .table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    min-width: 600px;
+                }
+                .table th,
+                .table td {
+                    border: 1px solid #ccc;
+                    padding: 12px;
+                    text-align: left;
+                }
+                .table th {
+                    background-color: #f5f5f5;
+                    font-weight: bold;
+                }
+                .table tbody tr:nth-child(even) {
+                    background-color: rgba(0, 0, 0, 0.02);
+                }
+                .table tbody tr:hover {
+                    background-color: rgba(0, 0, 0, 0.05);
+                }
+                .badge {
+                    display: inline-block;
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    font-size: 0.8em;
+                }
+                .badge-buyer {
+                    background-color: #ebf8ff;
+                    color: #2b6cb0;
+                }
+                .badge-vendor {
+                    background-color: #f0fff4;
+                    color: #276749;
+                }
+                .badge-unregistered {
+                    background-color: #fff5f5;
+                    color: #c53030;
+                }
+            </style>
+            <div class="table-container">
+                ${tableContent}
+            </div>
+        `;
+    }
+
+    renderUsersTable() {
+        return `
+            <table class="table">
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Product</th>
-                        <th>Sales</th>
-                        <th>Revenue</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Favorite Stores</th>
+                        <th>Recent Orders</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td>1</td>
-                        <td>Product 1</td>
-                        <td>50</td>
-                        <td>$999.50</td>
-                    </tr>
-                    <tr>
-                        <td>2</td>
-                        <td>Product 2</td>
-                        <td>70</td>
-                        <td>$1,749.30</td>
-                    </tr>
-                    <tr>
-                        <td>3</td>
-                        <td>Product 3</td>
-                        <td>30</td>
-                        <td>$479.70</td>
-                    </tr>
-                    <tr>
-                        <td>4</td>
-                        <td>Product 4</td>
-                        <td>45</td>
-                        <td>$1,349.55</td>
-                    </tr>
-                    <tr>
-                        <td>5</td>
-                        <td>Product 5</td>
-                        <td>60</td>
-                        <td>$2,099.40</td>
-                    </tr>
+                    ${mockUsers.map(user => `
+                        <tr>
+                            <td>${user.id}</td>
+                            <td>${user.name}</td>
+                            <td>${user.email}</td>
+                            <td>
+                                <span class="badge badge-${user.role}">
+                                    ${user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                                </span>
+                            </td>
+                            <td>${user.favoriteStores.length}</td>
+                            <td>${user.recentOrders.length}</td>
+                        </tr>
+                    `).join('')}
                 </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="2">Total</td>
-                        <td>255</td>
-                        <td>$6,677.45</td>
-                    </tr>
-                </tfoot>
             </table>
-        </div>
-        <style>
-            :host {
-                display: block;
-                width: 100%;
-            }
-            
-            .table-container {
-                max-width: 900px;
-                margin: 0 auto;
-                padding: 20px;
-            }
-            
-            .data-table {
-                width: 100%;
-                border-collapse: collapse;
-                margin-top: 20px;
-                background-color: var(--background);
-                border-radius: var(--border-radius);
-                overflow: hidden;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            }
-            
-            .data-table th,
-            .data-table td {
-                padding: 12px 15px;
-                text-align: left;
-                border-bottom: 1px solid #eee;
-            }
-            
-            .data-table thead tr {
-                background-color: var(--primary-accent);
-                color: white;
-                text-transform: uppercase;
-                font-size: 14px;
-            }
-            
-            .data-table tbody tr:hover {
-                background-color: rgba(0,0,0,0.02);
-            }
-            
-            .data-table tfoot {
-                font-weight: bold;
-                background-color: rgba(0,0,0,0.03);
-            }
-            
-            @media (max-width: 768px) {
-                .table-container {
-                    padding-bottom: calc(60px + 20px); /* Bottom nav height + padding */
-                }
-                
-                .data-table {
-                    font-size: 14px;
-                    margin-bottom: 60px; /* Ensure table is visible above nav */
-                }
-                
-                .data-table th,
-                .data-table td {
-                    padding: 8px 10px;
-                }
-            }
-        </style>`;
+        `;
     }
 }
