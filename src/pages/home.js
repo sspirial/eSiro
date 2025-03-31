@@ -1,29 +1,6 @@
 export class HomePage extends HTMLElement {
-    constructor() {
-        super();
-        this.attachShadow({ mode: 'open' });
-    }
-
-    static get observedAttributes() {
-        return ['title'];
-    }
-
-    attributeChangedCallback(name, oldValue, newValue) {
-        if (oldValue !== newValue) {
-            this.render();
-        }
-    }
-
     connectedCallback() {
-        this.render();
-    }
-
-    disconnectedCallback() {
-        // Clean up any event listeners if added in the future
-    }
-
-    render() {
-        this.shadowRoot.innerHTML = `
+        this.innerHTML = `
             <div class="public-home">
                 <h1>Welcome to eSiro</h1>
                 <div class="featured-content">

@@ -1,154 +1,277 @@
-import { mockProducts } from '../mock-data.js';
-import { NotificationService } from '../services/notification.js';
-
 export default class EsiroProduct extends HTMLElement {
     constructor() {
         super();
-        this.attachShadow({ mode: 'open' });
         this.addEventListener('click', this.handleClick.bind(this));
-    }
-
-    static get observedAttributes() {
-        return ['name'];
-    }
-
-    attributeChangedCallback(name, oldValue, newValue) {
-        if (oldValue !== newValue) {
-            this.renderDefault();
-        }
     }
 
     connectedCallback() {
         this.renderDefault();
     }
 
-    disconnectedCallback() {
-        // Clean up event listeners
-        this.removeEventListener('click', this.handleClick);
-    }
-
     renderDefault() {
-        const productName = this.getAttribute('name');
-        const product = mockProducts.find(product => product.name === productName);
+        const name = this.getAttribute('name') || 'A product';
+        const price = this.getAttribute('price') || '$0.00';
+        const image = this.getAttribute('image') || 'https://via.placeholder.com/150';
         
-        if (!product) {
-            console.warn(`Product with name "${productName}" not found in mock data`);
-        }
-        
-        this.shadowRoot.innerHTML = `
+        this.innerHTML = `
+            <div class="product-card">
+                <div class="product-image">
+                    <img src="${image}" alt="${name}">
+                </div>
+                <div class="product-info">
+                    <h3>${name}</h3>
+                    <p class="price">${price}</p>
+                    <button class="add-to-cart">Add to Cart</button>
+                </div>
+            </div>
             <style>
-                .card {
-                    padding: 16px;
+                .product-card {
+                    display: flex;
+                    flex-direction: column;
+                    background-color: var(--background);
                     border: 1px solid #ccc;
-                    border-radius: 8px;
-                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-                    cursor: pointer;
-                    transition: transform 0.3s, box-shadow 0.3s;
+                    border-radius: var(--border-radius);
+                    overflow: hidden;
+                    transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+                    height: 100%;
                 }
-                .card:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+                
+                .product-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
                 }
-                h3 {
-                    margin-top: 0;
-                    margin-bottom: 8px;
+                
+                .product-image {
+                    width: 100%;
+                    aspect-ratio: 1 / 1;
+                    overflow: hidden;
                 }
+                
+                .product-image img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                    transition: transform 0.3s ease;
+                }
+                
+                .product-card:hover .product-image img {
+                    transform: scale(1.05);
+                }
+                
+                .product-info {
+                    padding: 15px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                    flex-grow: 1;
+                }
+                
+                .product-info h3 {
+                    margin: 0;
+                    font-size: 16px;
+                }
+                
                 .price {
+                    font-size: 18px;
                     font-weight: bold;
-                    color: #2a5;
-                    font-size: 1.1em;
+                    color: var(--primary-accent);
+                    margin: 0;
+                }
+                
+                .add-to-cart {
+                    padding: 8px 12px;
+                    border: none;
+                    border-radius: var(--border-radius);
+                    cursor: pointer;
+                    margin-top: auto;
                 }
             </style>
-            <div class="card">
-                <h3>${product ? product.name : 'Unknown Product'}</h3>
-                <p class="price">${product ? `$${product.price.toFixed(2)}` : ''}</p>
-                <p>Store ID: ${product ? product.storeId : 'N/A'}</p>
-            </div>
         `;
+        
+        this.querySelector(".add-to-cart").addEventListener("click", (e) => {
+            e.stopPropagation();
+            alert(`Added ${name} to cart!`);
+        });
     }
 
     renderExpanded() {
-        const productName = this.getAttribute('name');
-        const product = mockProducts.find(product => product.name === productName);
+        const name = this.getAttribute('name') || 'A product';
+        const price = this.getAttribute('price') || '$0.00';
+        const image = this.getAttribute('image') || 'https://via.placeholder.com/300';
         
-        this.shadowRoot.innerHTML = `
-            <style>
-                .expanded-card {
-                    padding: 20px;
-                    background: white;
-                    border-radius: 8px;
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-                }
-                h2 {
-                    margin-top: 0;
-                    border-bottom: 1px solid #eee;
-                    padding-bottom: 10px;
-                }
-                .info-row {
-                    margin: 12px 0;
-                }
-                .label {
-                    font-weight: bold;
-                }
-                .price {
-                    font-size: 1.5em;
-                    font-weight: bold;
-                    color: #2a5;
-                    margin: 12px 0;
-                }
-                button {
-                    padding: 8px 16px;
-                    background-color: #4299e1;
-                    color: white;
-                    border: none;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    margin-top: 16px;
-                    margin-right: 8px;
-                }
-                .buy-btn {
-                    background-color: #38a169;
-                }
-                button:hover {
-                    filter: brightness(1.1);
-                }
-            </style>
-            <div class="expanded-card">
-                <h2>${product ? product.name : 'Unknown Product'}</h2>
-                <div class="price">${product ? `$${product.price.toFixed(2)}` : ''}</div>
-                <div class="info-row">
-                    <span class="label">Product ID:</span> ${product ? product.id : 'N/A'}
-                </div>
-                <div class="info-row">
-                    <span class="label">Store ID:</span> ${product ? product.storeId : 'N/A'}
-                </div>
-                <div class="actions">
-                    <button class="buy-btn" id="add-to-cart">Add to Cart</button>
-                    <button id="close-btn">Close</button>
+        this.innerHTML = `
+            <div class="product-expanded">
+                <button class="close-button">×</button>
+                <div class="product-expanded-content">
+                    <div class="product-expanded-image">
+                        <img src="${image}" alt="${name}">
+                    </div>
+                    <div class="product-expanded-info">
+                        <h2>${name}</h2>
+                        <p class="price">${price}</p>
+                        <div class="product-description">
+                            <p>This is a detailed description for ${name}. Here you would find all the specifications, features, and other important details about the product.</p>
+                        </div>
+                        <div class="product-actions">
+                            <button class="add-to-cart-expanded">Add to Cart</button>
+                            <button class="buy-now">Buy Now</button>
+                        </div>
+                    </div>
                 </div>
             </div>
+            <style>
+                .product-expanded {
+                    position: fixed; /* Changed from absolute to fixed */
+                    top: 60px; /* Account for header */
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    height: calc(100vh - 60px);
+                    background: var(--background);
+                    padding: 20px;
+                    overflow-y: auto;
+                    z-index: 1000; /* Increased z-index to ensure it's on top */
+                    box-sizing: border-box;
+                }
+                
+                @media (max-width: 768px) {
+                    .product-expanded {
+                        bottom: 60px; /* Account for bottom nav */
+                        height: calc(100vh - 120px);
+                    }
+                }
+                
+                .close-button {
+                    position: sticky;
+                    top: 0;
+                    right: 0;
+                    float: right;
+                    font-size: 24px;
+                    background: var(--background);
+                    border: none;
+                    cursor: pointer;
+                    z-index: 1001;
+                    padding: 5px 10px;
+                    margin-bottom: 10px;
+                }
+                
+                .product-expanded-content {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 30px;
+                    max-width: 1200px;
+                    margin: 0 auto;
+                }
+                
+                @media (max-width: 768px) {
+                    .product-expanded-content {
+                        grid-template-columns: 1fr;
+                    }
+                    
+                    .product-expanded {
+                        padding: 15px;
+                        padding-bottom: 80px; /* Space for bottom nav and actions */
+                    }
+                    
+                    .product-actions {
+                        position: sticky;
+                        bottom: 0;
+                        left: 0;
+                        right: 0;
+                        display: flex;
+                        padding: 10px;
+                        background: var(--background);
+                        border-top: 1px solid #ccc;
+                        z-index: 101;
+                        margin: 0 -15px;
+                        margin-top: 20px;
+                    }
+                    
+                    .add-to-cart-expanded, .buy-now {
+                        flex: 1;
+                    }
+                }
+                
+                .product-expanded-image {
+                    width: 100%;
+                }
+                
+                .product-expanded-image img {
+                    width: 100%;
+                    border-radius: var(--border-radius);
+                }
+                
+                .product-expanded-info {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 15px;
+                }
+                
+                .product-expanded-info h2 {
+                    margin: 0;
+                    font-size: 24px;
+                }
+                
+                .product-expanded-info .price {
+                    font-size: 22px;
+                }
+                
+                .product-description {
+                    line-height: 1.5;
+                }
+                
+                .product-actions {
+                    display: flex;
+                    gap: 10px;
+                    margin-top: 20px;
+                }
+                
+                .add-to-cart-expanded, .buy-now {
+                    padding: 10px 15px;
+                    border: none;
+                    border-radius: var(--border-radius);
+                    cursor: pointer;
+                }
+                
+                .buy-now {
+                    background-color: var(--secondary-accent);
+                }
+            </style>
         `;
         
-        // Add event listener to close button
-        this.shadowRoot.querySelector("#close-btn").addEventListener("click", (e) => {
+        // Add event listeners
+        this.querySelector(".close-button").addEventListener("click", (e) => {
             e.stopPropagation();
             this.collapseProduct();
         });
-
-        // Add event listener for adding to cart
-        this.shadowRoot.querySelector("#add-to-cart").addEventListener("click", (e) => {
+        
+        this.querySelector(".add-to-cart-expanded").addEventListener("click", (e) => {
             e.stopPropagation();
-            this.addToCart(product);
+            alert(`Added ${name} to cart!`);
+        });
+        
+        this.querySelector(".buy-now").addEventListener("click", (e) => {
+            e.stopPropagation();
+            alert(`Proceeding to checkout for ${name}!`);
+        });
+        
+        // Hide other expanded cards to ensure only one is shown
+        document.querySelectorAll('esiro-product.expanded, esiro-store.expanded').forEach(card => {
+            if (card !== this) {
+                if (card.tagName === 'ESIRO-PRODUCT') {
+                    card.collapseProduct();
+                } else if (card.tagName === 'ESIRO-STORE') {
+                    card.collapseStore();
+                }
+            }
         });
     }
 
     handleClick(event) {
-        if (event.target.closest('button')) {
-            // If a button was clicked, let its own event handler handle it
-            return;
-        }
-        
-        if (!this.classList.contains("expanded")) {
+        if (event.target.tagName === 'BUTTON') {
+            // Buttons are handled by their own event listeners
+            event.stopPropagation();
+        } else if (!this.classList.contains("expanded")) {
             this.expandProduct();
         }
     }
@@ -161,44 +284,5 @@ export default class EsiroProduct extends HTMLElement {
     collapseProduct() {
         this.classList.remove("expanded");
         this.renderDefault();
-    }
-
-    addToCart(product) {
-        if (!product) return;
-        
-        // Get current cart items from localStorage
-        let cartItems = [];
-        try {
-            const savedCart = localStorage.getItem('cart');
-            cartItems = savedCart ? JSON.parse(savedCart) : [];
-        } catch (e) {
-            console.error('Error parsing cart data:', e);
-            cartItems = [];
-        }
-        
-        // Check if product already exists in cart
-        const existingItemIndex = cartItems.findIndex(item => item.id === product.id);
-        
-        if (existingItemIndex >= 0) {
-            // Increment quantity if already in cart
-            cartItems[existingItemIndex].quantity = (cartItems[existingItemIndex].quantity || 1) + 1;
-        } else {
-            // Add new item with quantity 1
-            cartItems.push({
-                ...product,
-                quantity: 1
-            });
-        }
-        
-        // Save updated cart
-        localStorage.setItem('cart', JSON.stringify(cartItems));
-        
-        // Show notification using notification service
-        NotificationService.success(`${product.name} added to cart!`);
-        
-        // Refresh any cart components that might be on the page
-        document.querySelectorAll('esiro-cart').forEach(cart => {
-            cart.setAttribute('update', Date.now().toString());
-        });
     }
 }

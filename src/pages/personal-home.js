@@ -1,59 +1,31 @@
 import { AuthService } from '../services/auth.js';
-import { mockUsers, mockStores, mockProducts } from '../mock-data.js';
-import { RouterService } from '../services/router.js';
 
 export class PersonalHomePage extends HTMLElement {
-    constructor() {
-        super();
-        this.attachShadow({ mode: 'open' });
-    }
-
-    static get observedAttributes() {
-        return ['user'];
-    }
-
-    attributeChangedCallback(name, oldValue, newValue) {
-        if (oldValue !== newValue) {
-            this.render();
-        }
-    }
-
     connectedCallback() {
         const user = AuthService.getUser();
         if (!user) {
-            RouterService.navigate('/account');
+            window.location.href = '/account';
             return;
         }
 
-        this.render(user);
-    }
-
-    disconnectedCallback() {
-        // Clean up any event listeners if added in the future
-    }
-
-    render(user) {
-        const recentOrders = this.getRecentOrders(user);
-        const favoriteStores = this.getFavoriteStores(user);
-
-        this.shadowRoot.innerHTML = `
+        this.innerHTML = `
             <div class="personal-home">
                 <h1>Welcome back, ${user.name}</h1>
                 <div class="dashboard">
                     <div class="quick-actions">
-                        <button onclick="document.querySelector('esiro-network').showSection('stores')">Browse Stores</button>
-                        <button onclick="document.querySelector('esiro-network').showSection('cart')">View Cart</button>
                     </div>
                     <div class="recent-orders">
                         <h2>Recent Orders</h2>
                         <div class="order-list">
-                            ${recentOrders.length > 0 ? recentOrders.map(order => `<p>${order.name} - $${order.price}</p>`).join('') : '<p>No recent orders</p>'}
+                            <!-- Placeholder for orders -->
+                            <p>No recent orders</p>
                         </div>
                     </div>
                     <div class="favorites">
                         <h2>Favorite Stores</h2>
                         <div class="store-list">
-                            ${favoriteStores.length > 0 ? favoriteStores.map(store => `<p>${store.name} - ${store.location}</p>`).join('') : '<p>No favorite stores yet</p>'}
+                            <!-- Placeholder for favorite stores -->
+                            <p>No favorite stores yet</p>
                         </div>
                     </div>
                 </div>
@@ -77,14 +49,6 @@ export class PersonalHomePage extends HTMLElement {
                     }
                 </style>
             </div>`;
-    }
-
-    getRecentOrders(user) {
-        return mockProducts.filter(product => user.recentOrders.includes(product.id));
-    }
-
-    getFavoriteStores(user) {
-        return mockStores.filter(store => user.favoriteStores.includes(store.id));
     }
 }
 
