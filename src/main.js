@@ -9,9 +9,13 @@ import {
   EsiroCart,
 } from "./components/index.js";
 
+import { mockStores, mockProducts, mockUsers } from "./mock-data.js";
+import { RouterService } from "./services/router.js";
+
 export default class EsiroNetwork extends HTMLElement {
   constructor() {
     super();
+    this.attachShadow({ mode: 'open' });
   }
 
   connectedCallback() {
@@ -19,7 +23,7 @@ export default class EsiroNetwork extends HTMLElement {
   }
 
   render() {
-    this.innerHTML = `
+    this.shadowRoot.innerHTML = `
     <style>
       :root {
         /* Color Palette */
@@ -175,10 +179,83 @@ export default class EsiroNetwork extends HTMLElement {
   }
 
   showSection(section) {
-    document
-      .querySelectorAll("main section")
-      .forEach((sec) => sec.classList.add("hidden"));
-    document.getElementById(section)?.classList.remove("hidden");
+    RouterService.navigateToSection(section);
+    this.showMockData(section);
+  }
+
+  showMockData(section) {
+    // Wait for the esiro-main custom element to be fully defined
+    customElements.whenDefined('esiro-main').then(() => {
+      // Get the esiro-main element
+      const esiroMain = document.querySelector('esiro-main');
+      
+      if (!esiroMain) {
+        console.error('esiro-main element not found');
+        return;
+      }
+      
+      // Check if shadow DOM is initialized
+      if (!esiroMain.shadowRoot) {
+        console.error('Shadow DOM not initialized for esiro-main element');
+        return;
+      }
+
+      // Now populate the correct section with mock data
+      this.populateMockData(section, esiroMain.shadowRoot);
+    }).catch(error => {
+      console.error('Error in showMockData:', error);
+    });
+  }
+
+  populateMockData(section, shadowRoot) {
+    let data;
+    try {
+      switch (section) {
+        case "stores":
+          data = mockStores;
+          const storesSection = shadowRoot.querySelector('#stores .grid');
+          if (storesSection) {
+            storesSection.innerHTML = data.map(store => 
+              `<esiro-store name="${store.name}"></esiro-store>`
+            ).join('');
+            console.log(`Populated ${data.length} stores`);
+          } else {
+            console.error('Stores section not found');
+          }
+          break;
+          
+        case "products":
+          data = mockProducts;
+          const productsSection = shadowRoot.querySelector('#products .grid');
+          if (productsSection) {
+            productsSection.innerHTML = data.map(product => 
+              `<esiro-product name="${product.name}"></esiro-product>`
+            ).join('');
+            console.log(`Populated ${data.length} products`);
+          } else {
+            console.error('Products section not found');
+          }
+          break;
+          
+        case "data":
+          data = mockUsers;
+          // Handle data section if needed
+          break;
+          
+        case "cart":
+          data = mockProducts; // Assuming cart contains products
+          // Handle cart section if needed
+          break;
+          
+        default:
+          data = [];
+          console.warn(`Unknown section: ${section}`);
+      }
+      
+      console.log(`Showing data for ${section}:`, data);
+    } catch (error) {
+      console.error('Error populating data:', error);
+    }
   }
 }
 

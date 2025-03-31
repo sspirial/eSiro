@@ -10,4 +10,13 @@ export class ThemeService {
         document.documentElement.setAttribute('data-theme', newTheme);
         localStorage.setItem('theme', newTheme);
     }
+
+    static setTheme(theme) {
+        if (theme !== 'light' && theme !== 'dark') {
+            console.error(`Invalid theme: ${theme}`);
+            return;
+        }
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+    }
 }

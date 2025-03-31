@@ -1,10 +1,29 @@
 export default class EsiroNav extends HTMLElement {
+    constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+    }
+
+    static get observedAttributes() {
+        return ['section'];
+    }
+
+    attributeChangedCallback(name, oldValue, newValue) {
+        if (oldValue !== newValue) {
+            this.render();
+        }
+    }
+
     connectedCallback() {
         this.render();
     }
 
+    disconnectedCallback() {
+        // Clean up any event listeners if added in the future
+    }
+
     render() {
-        this.innerHTML = `
+        this.shadowRoot.innerHTML = `
         <nav>
             <button onclick="document.querySelector('esiro-network').showSection('stores')">
                 🏪 Stores
@@ -20,6 +39,13 @@ export default class EsiroNav extends HTMLElement {
             </button>
         </nav>
         <style>
+            nav {
+                display: flex;
+                flex-direction: column;
+                width: 200px;
+                border-right: 1px solid #ccc;
+                padding: 10px;
+            }
             nav button {
                 display: flex;
                 align-items: center;
@@ -39,6 +65,11 @@ export default class EsiroNav extends HTMLElement {
             .nav-icon {
                 width: 20px;
                 height: 20px;
+            }
+            @media (max-width: 768px) {
+                nav {
+                    display: none;
+                }
             }
         </style>`;
     }
