@@ -1,29 +1,75 @@
 export default class EsiroMain extends HTMLElement {
+    constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+    }
+
+    static get observedAttributes() {
+        return ['section'];
+    }
+
+    attributeChangedCallback(name, oldValue, newValue) {
+        if (oldValue !== newValue) {
+            this.render();
+        }
+    }
+
     connectedCallback() {
         this.render();
+        // Ensure initial visibility - show stores by default
+        setTimeout(() => {
+            const storesSection = this.shadowRoot.querySelector('#stores');
+            if (storesSection) {
+                storesSection.classList.remove('hidden');
+            }
+        }, 100);
+    }
+
+    disconnectedCallback() {
+        // Clean up any event listeners if added in the future
     }
 
     render() {
-        this.innerHTML = `
+        this.shadowRoot.innerHTML = `
+        <style>
+            main {
+                flex: 1;
+                padding: 20px;
+                overflow-y: auto;
+                position: relative;
+            }
+            .hidden {
+                display: none;
+            }
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 20px;
+            }
+            section {
+                width: 100%;
+                height: 100%;
+            }
+        </style>
         <main>
             <section id="stores" class="hidden">
+                <h2>Available Stores</h2>
                 <div class="grid">
-                    <esiro-store></esiro-store>
-                    <esiro-store></esiro-store>
-                    <esiro-store></esiro-store>
+                    <!-- Store components will be dynamically added here -->
                 </div>
             </section>
             <section id="products" class="hidden">
+                <h2>Available Products</h2>
                 <div class="grid">
-                    <esiro-product></esiro-product>
-                    <esiro-product></esiro-product>
-                    <esiro-product></esiro-product>
+                    <!-- Product components will be dynamically added here -->
                 </div>
             </section>
             <section id="data" class="hidden">
+                <h2>User Data</h2>
                 <esiro-table></esiro-table>
             </section>
             <section id="cart" class="hidden">
+                <h2>Your Cart</h2>
                 <esiro-cart></esiro-cart>
             </section>
         </main>`;
