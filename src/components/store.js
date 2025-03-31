@@ -135,13 +135,11 @@ export default class EsiroStore extends HTMLElement {
     }
 
     expandStore() {
-        console.log('Expanding store:', this.getAttribute('name'));
         this.classList.add("expanded");
         this.renderExpanded();
     }
 
     collapseStore() {
-        console.log('Collapsing store');
         this.classList.remove("expanded");
         this.renderDefault();
     }

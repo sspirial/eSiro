@@ -209,7 +209,6 @@ export default class EsiroCart extends HTMLElement {
                 
                 this.saveCartItems();
                 this.render();
-                this.setupEventListeners(); // Re-attach event listeners
             });
         });
 
@@ -220,7 +219,6 @@ export default class EsiroCart extends HTMLElement {
                 this.cartItems.splice(index, 1);
                 this.saveCartItems();
                 this.render();
-                this.setupEventListeners(); // Re-attach event listeners
             });
         });
 

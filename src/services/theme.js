@@ -12,6 +12,10 @@ export class ThemeService {
     }
 
     static setTheme(theme) {
+        if (theme !== 'light' && theme !== 'dark') {
+            console.error(`Invalid theme: ${theme}`);
+            return;
+        }
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem('theme', theme);
     }

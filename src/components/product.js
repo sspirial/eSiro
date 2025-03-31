@@ -154,13 +154,11 @@ export default class EsiroProduct extends HTMLElement {
     }
 
     expandProduct() {
-        console.log('Expanding product:', this.getAttribute('name'));
         this.classList.add("expanded");
         this.renderExpanded();
     }
 
     collapseProduct() {
-        console.log('Collapsing product');
         this.classList.remove("expanded");
         this.renderDefault();
     }

@@ -33,6 +33,7 @@ export default class EsiroHeader extends HTMLElement {
         const isLoggedIn = AuthService.isLoggedIn();
         const user = AuthService.getUser();
         const cartItemCount = this.getCartItemCount();
+        const themeIcon = document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
 
         this.shadowRoot.innerHTML = `
         <header>
@@ -45,7 +46,7 @@ export default class EsiroHeader extends HTMLElement {
             </div>
             <div class="header-actions">
                 <button id="theme-toggle" title="Toggle theme">
-                    ${document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙'}
+                    ${themeIcon}
                 </button>
                 <a href="#" id="cart-link" title="View cart">
                     🛒 ${cartItemCount > 0 ? `<span class="badge">${cartItemCount}</span>` : ''}
