@@ -3,8 +3,10 @@ import { dexieCloud } from "dexie-cloud-addon";
 
 var db = new Dexie("esiro-network", {addons: [dexieCloud]});
 
-db.version(1).stores({
-    names: '@id, name'
+db.version(2).stores({
+    names: '@id, name',
+
+    realms: '@realmId'
 })
 
 db.cloud.configure({
