@@ -1,4 +1,5 @@
 import { mockProducts } from '../mock-data.js';
+import { NotificationService } from '../services/notification.js';
 
 export default class EsiroProduct extends HTMLElement {
     constructor() {
@@ -194,52 +195,12 @@ export default class EsiroProduct extends HTMLElement {
         // Save updated cart
         localStorage.setItem('cart', JSON.stringify(cartItems));
         
-        // Show notification
-        this.showNotification(`${product.name} added to cart!`);
+        // Show notification using notification service
+        NotificationService.success(`${product.name} added to cart!`);
         
         // Refresh any cart components that might be on the page
         document.querySelectorAll('esiro-cart').forEach(cart => {
             cart.setAttribute('update', Date.now().toString());
         });
-    }
-    
-    showNotification(message) {
-        // Create a notification element
-        const notification = document.createElement('div');
-        notification.textContent = message;
-        notification.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background-color: #38a169;
-            color: white;
-            padding: 12px 20px;
-            border-radius: 4px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            z-index: 1000;
-            animation: fadeIn 0.3s, fadeOut 0.3s 2.7s;
-        `;
-        
-        // Add animation styles
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes fadeIn {
-                from { opacity: 0; transform: translateY(20px); }
-                to { opacity: 1; transform: translateY(0); }
-            }
-            @keyframes fadeOut {
-                from { opacity: 1; transform: translateY(0); }
-                to { opacity: 0; transform: translateY(20px); }
-            }
-        `;
-        document.head.appendChild(style);
-        
-        // Add notification to body
-        document.body.appendChild(notification);
-        
-        // Remove after 3 seconds
-        setTimeout(() => {
-            document.body.removeChild(notification);
-        }, 3000);
     }
 }
