@@ -13,8 +13,6 @@ export class PersonalHomePage extends HTMLElement {
                 <h1>Welcome back, ${user.name}</h1>
                 <div class="dashboard">
                     <div class="quick-actions">
-                        <button onclick="document.querySelector('esiro-network').showSection('stores')">Browse Stores</button>
-                        <button onclick="document.querySelector('esiro-network').showSection('cart')">View Cart</button>
                     </div>
                     <div class="recent-orders">
                         <h2>Recent Orders</h2>

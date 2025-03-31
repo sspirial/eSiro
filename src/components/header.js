@@ -8,7 +8,8 @@ export default class EsiroHeader extends HTMLElement {
     }
 
     render() {
-        this.innerHTML = `<header>
+        this.innerHTML = `
+        <div class="header-container">
             <a href="#" id="logo">
                 <img src="./eSiro-app-logo.png" alt="eSiro logo" class="logo-img">
             </a>
@@ -20,13 +21,22 @@ export default class EsiroHeader extends HTMLElement {
                 <button id="theme-toggle">🌓</button>
                 <a href="#" id="account">👤</a>
             </div>
-        </header>
+        </div>
         <style>
-            header {
-                padding: 16px;
-                background: var(--background);
-                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            :host {
+                display: block;
+                width: 100%;
             }
+            
+            .header-container {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                width: 100%;
+                padding: 0 2%;
+                box-sizing: border-box;
+            }
+            
             .logo-img {
                 height: 32px;
                 transition: transform var(--transition-speed);
@@ -81,7 +91,7 @@ export default class EsiroHeader extends HTMLElement {
 
         this.querySelector('#account').addEventListener('click', (e) => {
             e.preventDefault();
-            window.location.href = '/account';
+            window.location.href = '/eSiro/account/';
         });
 
         this.querySelector('#theme-toggle').addEventListener('click', () => {
