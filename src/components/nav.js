@@ -16,6 +16,7 @@ export default class EsiroNav extends HTMLElement {
 
     connectedCallback() {
         this.render();
+        this.setupEventListeners();
     }
 
     disconnectedCallback() {
@@ -25,16 +26,16 @@ export default class EsiroNav extends HTMLElement {
     render() {
         this.shadowRoot.innerHTML = `
         <nav>
-            <button onclick="document.querySelector('esiro-network').showSection('stores')">
+            <button data-section="stores">
                 🏪 Stores
             </button>
-            <button onclick="document.querySelector('esiro-network').showSection('products')">
+            <button data-section="products">
                 📦 Products
             </button>
-            <button onclick="document.querySelector('esiro-network').showSection('data')">
+            <button data-section="data">
                 📊 Data
             </button>
-            <button onclick="document.querySelector('esiro-network').showSection('cart')">
+            <button data-section="cart">
                 🛒 Cart
             </button>
         </nav>
@@ -57,14 +58,29 @@ export default class EsiroNav extends HTMLElement {
                 background: transparent;
                 color: var(--text-primary);
                 transition: all var(--transition-speed);
+                cursor: pointer;
             }
-            nav button:hover {
+            
+            nav button:hover,
+            nav button.active {
                 background: var(--primary-accent);
+                color: white;
                 transform: translateX(4px);
             }
-            .nav-icon {
-                width: 20px;
-                height: 20px;
+
+            @media (max-width: 768px) {
+                nav button {
+                    margin-bottom: 0;
+                    justify-content: center;
+                    transform: none !important;
+                }
+
+                nav button:hover,
+                nav button.active {
+                    transform: none !important;
+                    border-top: 3px solid var(--primary-accent);
+                    padding-top: 9px;
+                }
             }
             @media (max-width: 768px) {
                 nav {

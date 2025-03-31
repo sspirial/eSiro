@@ -106,13 +106,13 @@ export default class EsiroNetwork extends HTMLElement {
   render() {
     this.shadowRoot.innerHTML = `
     <style>
-      :root {
-        /* Color Palette */
-        --dark-moss: hsla(86, 24%, 28%, 1);
-        --eerie-black: hsla(84, 12%, 8%, 1);
-        --chamoisee: hsla(37, 39%, 43%, 1);
-        --black: hsla(0, 0%, 0%, 1);
-        --auburn: hsla(4, 66%, 36%, 1);
+        :root {
+          /* Color Palette */
+          --dark-moss: hsla(86, 24%, 28%, 1);
+          --eerie-black: hsla(84, 12%, 8%, 1);
+          --chamoisee: hsla(37, 39%, 43%, 1);
+          --black: hsla(0, 0%, 0%, 1);
+          --auburn: hsla(4, 66%, 36%, 1);
 
         /* Theme Variables - Light Mode */
         --background: #F4F4F4;
@@ -219,35 +219,45 @@ export default class EsiroNetwork extends HTMLElement {
         nav {
           display: none;
         }
-        .bottom-nav {
+
+        body {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
           display: flex;
-          justify-content: space-around;
-          border-top: 1px solid #ccc;
-          padding: 10px;
-          position: fixed;
-          bottom: 0;
-          width: 100%;
-          background: white;
+          flex-direction: column;
+          height: 100vh;
         }
-      }
 
-      button {
-        background-color: var(--primary-accent);
-        color: var(--background);
-        border: none;
-        transition: all var(--transition-speed);
-        border-radius: var(--border-radius);
-      }
+        header {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 60px;
+          background-color: var(--background);
+          z-index: 1000;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
 
-      button:hover {
-        background-color: var(--secondary-accent);
-        filter: brightness(1.1);
-      }
+        .main-container {
+          display: grid;
+          grid-template-columns: 15% 1fr;
+          height: calc(100vh - 60px);
+          margin-top: 60px;
+          position: relative;
+        }
+        
+        @media (max-width: 768px) {
+          .main-container {
+            grid-template-columns: 1fr;
+            height: calc(100vh - 120px); /* Account for header and bottom nav */
+          }
+        }
 
-      input {
-        border-radius: var(--border-radius);
-        transition: border var(--transition-speed);
-      }
+        .hidden {
+          display: none;
+        }
     </style>
     <esiro-header></esiro-header>
     <div style="display: flex; flex: 1; overflow: hidden">
