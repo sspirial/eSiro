@@ -1,9 +1,43 @@
+import { db } from '../db.js';
+
 export default class EsiroTable extends HTMLElement {
-    connectedCallback() {
+    constructor() {
+        super();
+        this.salesData = [];
+    }
+
+    async connectedCallback() {
+        await this.loadSalesData();
         this.render();
     }
 
+    async loadSalesData() {
+        try {
+            const products = await db.products.toArray();
+            const orders = await db.orderItems.toArray();
+
+            this.salesData = products.map(product => {
+                const productOrders = orders.filter(order => order.productId === product.id);
+                const totalSales = productOrders.reduce((sum, order) => sum + order.quantity, 0);
+                const totalRevenue = productOrders.reduce((sum, order) => sum + (order.price * order.quantity), 0);
+                
+                return {
+                    id: product.id,
+                    name: product.name,
+                    sales: totalSales,
+                    revenue: totalRevenue
+                };
+            });
+        } catch (error) {
+            console.error('Error loading sales data:', error);
+            this.salesData = [];
+        }
+    }
+
     render() {
+        const totalSales = this.salesData.reduce((sum, item) => sum + item.sales, 0);
+        const totalRevenue = this.salesData.reduce((sum, item) => sum + item.revenue, 0);
+
         this.innerHTML = `
         <div class="table-container">
             <h2>Sales Data</h2>
@@ -17,42 +51,20 @@ export default class EsiroTable extends HTMLElement {
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td>1</td>
-                        <td>Product 1</td>
-                        <td>50</td>
-                        <td>$999.50</td>
-                    </tr>
-                    <tr>
-                        <td>2</td>
-                        <td>Product 2</td>
-                        <td>70</td>
-                        <td>$1,749.30</td>
-                    </tr>
-                    <tr>
-                        <td>3</td>
-                        <td>Product 3</td>
-                        <td>30</td>
-                        <td>$479.70</td>
-                    </tr>
-                    <tr>
-                        <td>4</td>
-                        <td>Product 4</td>
-                        <td>45</td>
-                        <td>$1,349.55</td>
-                    </tr>
-                    <tr>
-                        <td>5</td>
-                        <td>Product 5</td>
-                        <td>60</td>
-                        <td>$2,099.40</td>
-                    </tr>
+                    ${this.salesData.map(item => `
+                        <tr>
+                            <td>${item.id}</td>
+                            <td>${item.name}</td>
+                            <td>${item.sales}</td>
+                            <td>$${item.revenue.toFixed(2)}</td>
+                        </tr>
+                    `).join('')}
                 </tbody>
                 <tfoot>
                     <tr>
                         <td colspan="2">Total</td>
-                        <td>255</td>
-                        <td>$6,677.45</td>
+                        <td>${totalSales}</td>
+                        <td>$${totalRevenue.toFixed(2)}</td>
                     </tr>
                 </tfoot>
             </table>
