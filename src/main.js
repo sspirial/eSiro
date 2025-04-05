@@ -74,15 +74,65 @@ export default class EsiroNetwork extends HTMLElement {
         .main-container {
           display: grid;
           grid-template-columns: 15% 1fr;
-          height: calc(100vh - 60px);
+          height: calc(100vh - 60px); /* Full height minus header */
           margin-top: 60px;
           position: relative;
         }
         
+        esiro-nav {
+          height: 100%;
+          background-color: var(--background);
+          box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+          transition: background-color var(--transition-speed);
+          z-index: 900;
+        }
+
+        esiro-nav nav {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+        }
+
+        esiro-nav nav button {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
         @media (max-width: 768px) {
+          esiro-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            display: flex;
+            background-color: var(--background);
+            box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.15);
+            z-index: 900;
+            padding: 0;
+          }
+
+          esiro-nav nav {
+            flex-direction: row;
+            justify-content: space-evenly; /* Ensure even spacing */
+            align-items: center;
+            width: 100%;
+            padding: 0;
+            box-sizing: border-box;
+          }
+
+          esiro-nav nav button {
+            flex: 1; /* Ensure all buttons take equal space */
+            text-align: center;
+          }
+
           .main-container {
             grid-template-columns: 1fr;
             height: calc(100vh - 120px); /* Account for header and bottom nav */
+            margin-bottom: 60px; /* Space for bottom nav */
           }
         }
 

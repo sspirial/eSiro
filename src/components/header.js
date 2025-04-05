@@ -74,6 +74,7 @@ export default class EsiroHeader extends HTMLElement {
                 padding: 0 2%;
                 box-sizing: border-box;
                 height: 60px; /* Fixed height for better alignment */
+                background-color: var(--header-background); /* Use shared variable */
             }
             
             #logo {

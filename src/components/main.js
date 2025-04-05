@@ -53,9 +53,9 @@ export default class EsiroMain extends HTMLElement {
             
             main {
                 width: 100%;
-                height: 100%;
+                height: calc(100vh - 60px); /* Adjust height to account for header and nav */
                 overflow-y: auto;
-                padding: 20px;
+                padding: 20px; /* Remove bottom padding to avoid overlap with nav */
                 box-sizing: border-box;
                 background-color: var(--background);
                 color: var(--text-primary);
@@ -91,8 +91,8 @@ export default class EsiroMain extends HTMLElement {
 
             @media (max-width: 768px) {
                 main {
+                    height: calc(100vh - 120px); /* Adjust height for header and bottom nav */
                     padding: 15px;
-                    padding-bottom: 140px; /* Increased padding to accommodate both search bar and nav */
                 }
                 
                 .product-grid, .store-grid {

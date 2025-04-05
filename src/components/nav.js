@@ -27,171 +27,125 @@ export default class EsiroNav extends HTMLElement {
     render() {
         this.innerHTML = `
         <nav aria-label="Main navigation">
-            <div class="nav-buttons">
-                <button data-section="stores" aria-label="Stores section">
-                    <span class="nav-icon material-icons">storefront</span>
-                    <span class="nav-text">Stores</span>
-                </button>
-                <button data-section="products" aria-label="Products section">
-                    <span class="nav-icon material-icons">inventory_2</span>
-                    <span class="nav-text">Products</span>
-                </button>
-                <button data-section="data" aria-label="Data section">
-                    <span class="nav-icon material-icons">monitoring</span>
-                    <span class="nav-text">Data</span>
-                </button>
-                <button data-section="cart" aria-label="Shopping cart">
-                    <span class="nav-icon material-icons">shopping_cart</span>
-                    <span class="nav-text">Cart</span>
-                    <span class="cart-badge" aria-hidden="true"></span>
-                </button>
-            </div>
+            <button data-section="stores" aria-label="Stores section">
+                <span class="nav-icon material-icons">storefront</span>
+                <span class="nav-text">Stores</span>
+            </button>
+            <button data-section="products" aria-label="Products section">
+                <span class="nav-icon material-icons">inventory_2</span>
+                <span class="nav-text">Products</span>
+            </button>
+            <button data-section="data" aria-label="Data section">
+                <span class="nav-icon material-icons">monitoring</span>
+                <span class="nav-text">Data</span>
+            </button>
+            <button data-section="cart" aria-label="Shopping cart">
+                <span class="nav-icon material-icons">shopping_cart</span>
+                <span class="nav-text">Cart</span>
+                <span class="cart-badge" aria-hidden="true"></span>
+            </button>
         </nav>
         <style>
             :host {
                 display: block;
-                height: 100%;
-            }
-            
-            nav {
                 position: fixed;
-                top: 60px;
-                left: 0;
-                bottom: 0;
-                width: 15%;
-                background-color: var(--background);
-                border-right: 1px solid #ccc;
-                overflow-y: auto; /* Keep this to allow scrolling if needed */
-                z-index: 98;
+                z-index: 1000;
+                background-color: var(--header-background); /* Use shared variable for header and nav */
                 box-sizing: border-box;
-                display: flex;
-                flex-direction: column;
-                padding: 15px 0;
-                overflow-x: hidden; /* Prevent horizontal scrolling */
-            }
-            
-            /* Container for nav buttons to prevent unwanted scroll */
-            nav .nav-buttons {
-                display: flex;
-                flex-direction: column;
-                width: 100%;
             }
 
-            @media (max-width: 768px) {
+            /* Large screens: Side rail */
+            @media (min-width: 769px) {
+                :host {
+                    top: 0;
+                    left: 0;
+                    bottom: 0;
+                    width: 15%; /* Fixed width for side rail */
+                    height: 100%;
+                    border-right: 1px solid #ccc;
+                }
+
                 nav {
-                    position: fixed;
-                    top: auto;
+                    display: flex;
+                    flex-direction: column;
+                    height: 100%;
+                    justify-content: flex-start;
+                    padding: 15px 0;
+                }
+
+                nav button {
+                    display: flex;
+                    align-items: center;
+                    justify-content: flex-start; /* Align content to the left */
+                    gap: 8px; /* Ensure consistent spacing between icon and text */
+                    padding: 12px 16px;
+                    border: none;
+                    background: transparent;
+                    color: var(--text-primary);
+                    cursor: pointer;
+                    text-align: left; /* Align text to the left */
+                    width: 100%;
+                    transition: background-color 0.3s ease, color 0.3s ease;
+                }
+
+                nav button .nav-icon {
+                    font-size: 1.5rem;
+                    flex-shrink: 0; /* Prevent icon from shrinking */
+                    width: 24px; /* Ensure consistent width */
+                    height: 24px; /* Ensure consistent height */
+                }
+
+                nav button .nav-text {
+                    font-size: 1rem;
+                    white-space: nowrap; /* Prevent text wrapping */
+                }
+            }
+
+            /* Small screens: Bottom navigation bar */
+            @media (max-width: 768px) {
+                :host {
                     bottom: 0;
                     left: 0;
                     right: 0;
-                    width: 100%;
-                    height: 60px;
+                    height: 60px; /* Fixed height for bottom bar */
+                    border-top: 1px solid #ccc;
+                }
+
+                nav {
                     display: flex;
                     flex-direction: row;
                     justify-content: space-around;
-                    border-right: none;
-                    border-top: 1px solid #ccc;
-                    overflow: hidden;
-                    background-color: var(--background);
-                    padding: 0;
-                    z-index: 1000; /* Ensure it's above other elements */
-                }
-                
-                nav .nav-buttons {
-                    flex-direction: row;
-                    width: 100%;
                     height: 100%;
-                    justify-content: space-around;
                 }
-                
-                nav button {
-                    flex: 1;
-                    width: auto;
-                    max-width: 25%;
-                }
-            }
-            
-            nav button {
-                display: flex;
-                align-items: center;
-                width: 100%;
-                padding: 12px 16px;
-                margin-bottom: 8px;
-                border: none;
-                background: transparent;
-                color: var(--text-primary);
-                transition: all var(--transition-speed);
-                cursor: pointer;
-                /* Fix icon and text alignment */
-                gap: 12px;
-            }
-            
-            nav button:hover,
-            nav button.active {
-                background: var(--primary-accent);
-                color: white;
-                transform: translateX(4px);
-            }
 
-            @media (max-width: 768px) {
                 nav button {
-                    margin-bottom: 0;
+                    display: flex;
                     flex-direction: column;
-                    justify-content: center;
                     align-items: center;
-                    position: relative;
-                    height: 100%;
-                    transform: none !important;
+                    justify-content: center;
+                    flex: 1;
+                    border: none;
+                    background: transparent;
+                    color: var(--text-primary);
+                    cursor: pointer;
+                    gap: 4px;
+                    text-align: center;
+                    transition: background-color 0.3s ease, color 0.3s ease;
                 }
 
                 nav button:hover,
                 nav button.active {
-                    transform: none !important;
-                    border-top: 3px solid var(--primary-accent);
-                    padding-top: 9px;
+                    color: var(--primary-accent);
                 }
-            }
 
-            .nav-icon {
-                flex-shrink: 0; /* Prevent icon from shrinking */
-                display: inline-flex; /* Better icon alignment */
-                justify-content: center;
-                align-items: center;
-                font-size: 1.5rem;
-                width: 24px; /* Fixed width for icon */
-            }
-            
-            .nav-text {
-                font-size: 0.8rem;
-                /* Remove margin-left since we're using gap */
-                white-space: nowrap; /* Prevent text wrapping */
-            }
-            
-            .cart-badge {
-                position: absolute;
-                top: 5px;
-                right: 5px;
-                background-color: var(--secondary-accent);
-                color: white;
-                border-radius: 50%;
-                width: 18px;
-                height: 18px;
-                font-size: 12px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                opacity: 0;
-                transition: opacity 0.3s ease;
-            }
-            
-            .cart-badge.visible {
-                opacity: 1;
-            }
-            
-            @media (max-width: 768px) {
-                .cart-badge {
-                    top: 2px;
-                    right: calc(50% - 18px);
+                .nav-icon {
+                    font-size: 1.5rem;
+                    width: 24px; /* Ensure consistent width */
+                    height: 24px; /* Ensure consistent height */
+                }
+
+                .nav-text {
+                    font-size: 0.8rem;
                 }
             }
         </style>`;
