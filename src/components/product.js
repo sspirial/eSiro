@@ -1,13 +1,35 @@
 import { ProductService } from '../services/products.js';
+import { db } from '../db.js';
 
 export default class EsiroProduct extends HTMLElement {
     constructor() {
         super();
         this.addEventListener('click', this.handleClick.bind(this));
+        this.productData = null;
+        this.storeData = null;
     }
 
-    connectedCallback() {
+    async connectedCallback() {
+        // Get full product data if we have an ID
+        const productId = this.getAttribute('product-id');
+        if (productId) {
+            await this.loadProductData(productId);
+        }
         this.renderDefault();
+    }
+
+    async loadProductData(productId) {
+        try {
+            await db.open();
+            this.productData = await db.products.get(productId);
+            
+            // If we have a vendor ID, load the store data as well
+            if (this.productData && this.productData.vendorId) {
+                this.storeData = await db.stores.get(this.productData.vendorId);
+            }
+        } catch (error) {
+            console.error('Error loading product data:', error);
+        }
     }
 
     async handleAddToCart(productId) {
@@ -24,6 +46,8 @@ export default class EsiroProduct extends HTMLElement {
         const price = this.getAttribute('price') || '$0.00';
         const image = this.getAttribute('image') || 'https://via.placeholder.com/150';
         const id = this.getAttribute('product-id');
+        const vendorId = this.getAttribute('vendor-id') || (this.productData ? this.productData.vendorId : null);
+        const vendorLabel = this.storeData ? `by ${this.storeData.name}` : '';
         
         this.innerHTML = `
             <div class="product-card">
@@ -32,6 +56,7 @@ export default class EsiroProduct extends HTMLElement {
                 </div>
                 <div class="product-info">
                     <h3>${name}</h3>
+                    <p class="vendor-label">${vendorLabel}</p>
                     <p class="price">${price}</p>
                     <button class="add-to-cart" data-product-id="${id}">Add to Cart</button>
                 </div>
@@ -83,6 +108,12 @@ export default class EsiroProduct extends HTMLElement {
                     font-size: 16px;
                 }
                 
+                .vendor-label {
+                    font-size: 12px;
+                    color: var(--text-secondary);
+                    margin: 0;
+                }
+                
                 .price {
                     font-size: 18px;
                     font-weight: bold;
@@ -96,6 +127,8 @@ export default class EsiroProduct extends HTMLElement {
                     border-radius: var(--border-radius);
                     cursor: pointer;
                     margin-top: auto;
+                    background-color: var(--primary-accent);
+                    color: white;
                 }
             </style>
         `;
@@ -110,6 +143,11 @@ export default class EsiroProduct extends HTMLElement {
         const name = this.getAttribute('name') || 'A product';
         const price = this.getAttribute('price') || '$0.00';
         const image = this.getAttribute('image') || 'https://via.placeholder.com/300';
+        const id = this.getAttribute('product-id');
+        const description = this.getAttribute('description') || '';
+        const stock = this.getAttribute('stock') || '0';
+        const vendorId = this.getAttribute('vendor-id') || (this.productData ? this.productData.vendorId : null);
+        const vendorName = this.storeData ? this.storeData.name : 'Unknown store';
         
         this.innerHTML = `
             <div class="product-expanded">
@@ -120,12 +158,18 @@ export default class EsiroProduct extends HTMLElement {
                     </div>
                     <div class="product-expanded-info">
                         <h2>${name}</h2>
+                        <p class="vendor-label">Sold by: <a href="#" class="store-link" data-store-id="${vendorId}">${vendorName}</a></p>
                         <p class="price">${price}</p>
+                        <div class="product-stats">
+                            <p><strong>ID:</strong> ${id}</p>
+                            <p><strong>Stock:</strong> ${stock} units</p>
+                        </div>
                         <div class="product-description">
-                            <p>This is a detailed description for ${name}. Here you would find all the specifications, features, and other important details about the product.</p>
+                            <h3>Description</h3>
+                            <p>${description || 'No description available.'}</p>
                         </div>
                         <div class="product-actions">
-                            <button class="add-to-cart-expanded">Add to Cart</button>
+                            <button class="add-to-cart-expanded" data-product-id="${id}">Add to Cart</button>
                             <button class="buy-now">Buy Now</button>
                         </div>
                     </div>
@@ -133,7 +177,7 @@ export default class EsiroProduct extends HTMLElement {
             </div>
             <style>
                 .product-expanded {
-                    position: fixed; /* Changed from absolute to fixed */
+                    position: fixed;
                     top: 60px; /* Account for header */
                     left: 0;
                     right: 0;
@@ -142,7 +186,7 @@ export default class EsiroProduct extends HTMLElement {
                     background: var(--background);
                     padding: 20px;
                     overflow-y: auto;
-                    z-index: 1000; /* Increased z-index to ensure it's on top */
+                    z-index: 1000;
                     box-sizing: border-box;
                 }
                 
@@ -228,6 +272,26 @@ export default class EsiroProduct extends HTMLElement {
                     font-size: 22px;
                 }
                 
+                .vendor-label {
+                    font-size: 14px;
+                    color: var(--text-secondary);
+                }
+                
+                .store-link {
+                    color: var(--primary-accent);
+                    text-decoration: none;
+                }
+                
+                .store-link:hover {
+                    text-decoration: underline;
+                }
+                
+                .product-stats {
+                    background-color: rgba(0,0,0,0.03);
+                    padding: 10px;
+                    border-radius: var(--border-radius);
+                }
+                
                 .product-description {
                     line-height: 1.5;
                 }
@@ -245,8 +309,14 @@ export default class EsiroProduct extends HTMLElement {
                     cursor: pointer;
                 }
                 
+                .add-to-cart-expanded {
+                    background-color: var(--primary-accent);
+                    color: white;
+                }
+                
                 .buy-now {
                     background-color: var(--secondary-accent);
+                    color: white;
                 }
             </style>
         `;
@@ -259,13 +329,33 @@ export default class EsiroProduct extends HTMLElement {
         
         this.querySelector(".add-to-cart-expanded").addEventListener("click", (e) => {
             e.stopPropagation();
-            alert(`Added ${name} to cart!`);
+            this.handleAddToCart(id);
         });
         
         this.querySelector(".buy-now").addEventListener("click", (e) => {
             e.stopPropagation();
             alert(`Proceeding to checkout for ${name}!`);
         });
+        
+        const storeLink = this.querySelector('.store-link');
+        if (storeLink) {
+            storeLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const storeId = storeLink.dataset.storeId;
+                if (storeId) {
+                    this.collapseProduct();
+                    // Find the store component with this ID and expand it
+                    setTimeout(() => {
+                        const storeComponents = document.querySelectorAll(`esiro-store[store-id="${storeId}"]`);
+                        if (storeComponents.length > 0) {
+                            document.querySelector('esiro-network').showSection('stores');
+                            storeComponents[0].expandStore();
+                        }
+                    }, 100);
+                }
+            });
+        }
         
         // Hide other expanded cards to ensure only one is shown
         document.querySelectorAll('esiro-product.expanded, esiro-store.expanded').forEach(card => {

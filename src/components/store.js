@@ -4,15 +4,24 @@ export default class EsiroStore extends HTMLElement {
     constructor() {
         super();
         this.addEventListener('click', this.handleClick.bind(this));
+        this.storeProducts = [];
     }
 
     connectedCallback() {
         this.renderDefault();
+        // Preload store products
+        const storeId = this.getAttribute('store-id');
+        if (storeId) {
+            this.loadStoreProducts(storeId).then(products => {
+                this.storeProducts = products;
+            });
+        }
     }
 
     renderDefault() {
         const name = this.getAttribute('name') || 'Local Store';
         const image = this.getAttribute('image') || 'https://via.placeholder.com/150';
+        const productCount = this.getAttribute('product-count') || '0';
         
         this.innerHTML = `
         <div class="store-card">
@@ -21,6 +30,7 @@ export default class EsiroStore extends HTMLElement {
             </div>
             <div class="store-info">
                 <h3>${name}</h3>
+                <p class="product-count">${productCount} Products</p>
                 <button class="visit-store">Visit Store</button>
             </div>
         </div>
@@ -76,6 +86,12 @@ export default class EsiroStore extends HTMLElement {
                 font-size: 16px;
             }
             
+            .product-count {
+                color: var(--text-secondary);
+                margin: 0;
+                font-size: 14px;
+            }
+            
             .visit-store {
                 padding: 8px 12px;
                 border: none;
@@ -100,6 +116,13 @@ export default class EsiroStore extends HTMLElement {
                 .where('vendorId')
                 .equals(storeId)
                 .toArray();
+            
+            // Update the product count in the UI
+            const productCountEl = this.querySelector('.product-count');
+            if (productCountEl) {
+                productCountEl.textContent = `${products.length} Products`;
+            }
+            
             return products;
         } catch (error) {
             console.error('Error loading store products:', error);
@@ -111,6 +134,7 @@ export default class EsiroStore extends HTMLElement {
         const name = this.getAttribute('name') || 'Local Store';
         const image = this.getAttribute('image') || 'https://via.placeholder.com/300';
         const id = this.getAttribute('store-id');
+        const description = this.getAttribute('description') || `This is a detailed description for ${name}.`;
         
         this.innerHTML = `
         <div class="store-expanded">
@@ -122,12 +146,17 @@ export default class EsiroStore extends HTMLElement {
                 <div class="store-expanded-info">
                     <h2>${name}</h2>
                     <div class="store-description">
-                        <p>This is a detailed description for ${name}. Here you would find all the details about the store, its location, opening hours, and other important information.</p>
+                        <p>${description}</p>
                     </div>
                     <div class="store-actions">
                         <button class="browse-products">Browse Products</button>
                         <button class="contact-store">Contact</button>
                     </div>
+                    <div class="store-stats">
+                        <p><strong>Products:</strong> <span class="product-count-expanded">Loading...</span></p>
+                        <p><strong>Store ID:</strong> ${id}</p>
+                    </div>
+                    <h3>Store Products</h3>
                     <div class="store-products"></div>
                 </div>
             </div>
@@ -251,6 +280,19 @@ export default class EsiroStore extends HTMLElement {
                 background-color: var(--background);
                 border: 1px solid var(--primary-accent);
             }
+            
+            .store-stats {
+                background-color: rgba(0,0,0,0.03);
+                padding: 10px;
+                border-radius: var(--border-radius);
+            }
+            
+            .store-products {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: 10px;
+                margin-top: 10px;
+            }
         </style>`;
         
         // Add event listeners
@@ -280,21 +322,41 @@ export default class EsiroStore extends HTMLElement {
             }
         });
 
-        this.loadStoreProducts(id).then(products => {
-            const productGrid = this.querySelector('.store-products');
-            if (productGrid && products.length > 0) {
-                productGrid.innerHTML = products.map(product => `
-                    <esiro-product 
-                        name="${product.name}" 
-                        price="$${product.price}" 
-                        image="${product.image}"
-                        product-id="${product.id}"
-                        description="${product.description}"
-                        stock="${product.stock}"
-                    ></esiro-product>
-                `).join('');
-            }
-        });
+        // If we already have products loaded, use them
+        if (this.storeProducts.length > 0) {
+            this.renderStoreProducts(this.storeProducts);
+        } else {
+            // Otherwise load them
+            this.loadStoreProducts(id).then(products => {
+                this.storeProducts = products;
+                this.renderStoreProducts(products);
+            });
+        }
+    }
+    
+    renderStoreProducts(products) {
+        const productGrid = this.querySelector('.store-products');
+        const productCountEl = this.querySelector('.product-count-expanded');
+        
+        if (productCountEl) {
+            productCountEl.textContent = products.length;
+        }
+        
+        if (productGrid && products.length > 0) {
+            productGrid.innerHTML = products.map(product => `
+                <esiro-product 
+                    name="${product.name}" 
+                    price="$${product.price}" 
+                    image="${product.image}"
+                    product-id="${product.id}"
+                    description="${product.description || ''}"
+                    stock="${product.stock || 0}"
+                    vendor-id="${product.vendorId}"
+                ></esiro-product>
+            `).join('');
+        } else if (productGrid) {
+            productGrid.innerHTML = '<p>No products available from this store.</p>';
+        }
     }
 
     handleClick(event) {
