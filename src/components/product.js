@@ -1,3 +1,5 @@
+import { ProductService } from '../services/products.js';
+
 export default class EsiroProduct extends HTMLElement {
     constructor() {
         super();
@@ -8,10 +10,20 @@ export default class EsiroProduct extends HTMLElement {
         this.renderDefault();
     }
 
+    async handleAddToCart(productId) {
+        const success = await ProductService.addToCart(productId);
+        if (success) {
+            alert('Added to cart!');
+        } else {
+            alert('Failed to add to cart. Please try again.');
+        }
+    }
+
     renderDefault() {
         const name = this.getAttribute('name') || 'A product';
         const price = this.getAttribute('price') || '$0.00';
         const image = this.getAttribute('image') || 'https://via.placeholder.com/150';
+        const id = this.getAttribute('product-id');
         
         this.innerHTML = `
             <div class="product-card">
@@ -21,7 +33,7 @@ export default class EsiroProduct extends HTMLElement {
                 <div class="product-info">
                     <h3>${name}</h3>
                     <p class="price">${price}</p>
-                    <button class="add-to-cart">Add to Cart</button>
+                    <button class="add-to-cart" data-product-id="${id}">Add to Cart</button>
                 </div>
             </div>
             <style>
@@ -90,7 +102,7 @@ export default class EsiroProduct extends HTMLElement {
         
         this.querySelector(".add-to-cart").addEventListener("click", (e) => {
             e.stopPropagation();
-            alert(`Added ${name} to cart!`);
+            this.handleAddToCart(id);
         });
     }
 

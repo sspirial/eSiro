@@ -1,26 +1,23 @@
-import {
-  EsiroCard,
-  EsiroStore,
-  EsiroProduct,
-  EsiroHeader,
-  EsiroNav,
-  EsiroMain,
-  EsiroTable,
-  EsiroCart,
-} from "./components/index.js";
+import { db, initializeDatabase } from './db.js';
+import { EsiroCard, EsiroStore, EsiroProduct, EsiroHeader, EsiroNav, EsiroMain, EsiroTable, EsiroCart } from "./components/index.js";
 
 export default class EsiroNetwork extends HTMLElement {
   constructor() {
     super();
   }
 
-  connectedCallback() {
-    this.render();
-    
-    // Set initial active section
-    setTimeout(() => {
-      this.showSection('products');
-    }, 100);
+  async connectedCallback() {
+    try {
+      await initializeDatabase(); // Initialize database first
+      this.render();
+      
+      // Set initial active section
+      setTimeout(() => {
+        this.showSection('products');
+      }, 100);
+    } catch (error) {
+      console.error('Error initializing application:', error);
+    }
   }
 
   render() {

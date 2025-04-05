@@ -1,3 +1,5 @@
+import { db } from '../db.js';
+
 export default class EsiroStore extends HTMLElement {
     constructor() {
         super();
@@ -91,9 +93,24 @@ export default class EsiroStore extends HTMLElement {
         });
     }
 
+    async loadStoreProducts(storeId) {
+        try {
+            await db.open(); // Ensure database is open
+            const products = await db.products
+                .where('vendorId')
+                .equals(storeId)
+                .toArray();
+            return products;
+        } catch (error) {
+            console.error('Error loading store products:', error);
+            return [];
+        }
+    }
+
     renderExpanded() {
         const name = this.getAttribute('name') || 'Local Store';
         const image = this.getAttribute('image') || 'https://via.placeholder.com/300';
+        const id = this.getAttribute('store-id');
         
         this.innerHTML = `
         <div class="store-expanded">
@@ -111,6 +128,7 @@ export default class EsiroStore extends HTMLElement {
                         <button class="browse-products">Browse Products</button>
                         <button class="contact-store">Contact</button>
                     </div>
+                    <div class="store-products"></div>
                 </div>
             </div>
         </div>
@@ -259,6 +277,22 @@ export default class EsiroStore extends HTMLElement {
                 } else if (card.tagName === 'ESIRO-STORE') {
                     card.collapseStore();
                 }
+            }
+        });
+
+        this.loadStoreProducts(id).then(products => {
+            const productGrid = this.querySelector('.store-products');
+            if (productGrid && products.length > 0) {
+                productGrid.innerHTML = products.map(product => `
+                    <esiro-product 
+                        name="${product.name}" 
+                        price="$${product.price}" 
+                        image="${product.image}"
+                        product-id="${product.id}"
+                        description="${product.description}"
+                        stock="${product.stock}"
+                    ></esiro-product>
+                `).join('');
             }
         });
     }

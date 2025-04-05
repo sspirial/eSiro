@@ -1,6 +1,48 @@
+import { db } from '../db.js';
+
 export default class EsiroCart extends HTMLElement {
-    connectedCallback() {
-        this.render();
+    constructor() {
+        super();
+        this.cartItems = [];
+    }
+
+    async connectedCallback() {
+        try {
+            await db.open(); // Ensure database is open
+            await this.loadCartItems();
+            this.render();
+        } catch (error) {
+            console.error('Error initializing cart:', error);
+            this.cartItems = [];
+            this.render();
+        }
+    }
+
+    async loadCartItems() {
+        try {
+            const userId = 'current-user';
+            const cartItems = await db.cart
+                .where('userId')
+                .equals(userId)
+                .toArray();
+
+            if (cartItems.length === 0) {
+                this.cartItems = [];
+                return;
+            }
+
+            const productIds = cartItems.map(item => item.productId);
+            const products = await db.products
+                .bulkGet(productIds);
+
+            this.cartItems = cartItems.map((item, index) => ({
+                ...item,
+                ...products[index]
+            }));
+        } catch (error) {
+            console.error('Error loading cart items:', error);
+            this.cartItems = [];
+        }
     }
 
     render() {
@@ -9,62 +51,12 @@ export default class EsiroCart extends HTMLElement {
             <h2>Shopping Cart</h2>
             
             <div class="cart-items">
-                <div class="cart-empty">
-                    <p>Your cart is empty</p>
-                    <button onclick="document.querySelector('esiro-network').showSection('products')" class="shop-button">Shop Now</button>
-                </div>
-                
-                <!-- Sample cart items (normally would be dynamically generated) -->
-                <div class="cart-item">
-                    <img src="https://via.placeholder.com/80" alt="Product" class="item-image">
-                    <div class="item-details">
-                        <h3>Sample Product</h3>
-                        <p class="item-price">$19.99</p>
-                    </div>
-                    <div class="item-quantity">
-                        <button class="quantity-btn">-</button>
-                        <span>1</span>
-                        <button class="quantity-btn">+</button>
-                    </div>
-                    <button class="remove-btn">✕</button>
-                </div>
+                ${this.cartItems.length === 0 ? this.renderEmptyCart() : this.renderCartItems()}
             </div>
             
-            <div class="cart-summary">
-                <div class="summary-row">
-                    <span>Subtotal:</span>
-                    <span>$19.99</span>
-                </div>
-                <div class="summary-row">
-                    <span>Shipping:</span>
-                    <span>$5.00</span>
-                </div>
-                <div class="summary-row total">
-                    <span>Total:</span>
-                    <span>$24.99</span>
-                </div>
-            </div>
+            ${this.cartItems.length > 0 ? this.renderCartSummary() : ''}
             
-            <form class="checkout-form">
-                <h3>Shipping Information</h3>
-                <div class="form-row">
-                    <input type="text" placeholder="Full Name" required>
-                </div>
-                <div class="form-row">
-                    <input type="text" placeholder="Address" required>
-                </div>
-                <div class="form-row double">
-                    <input type="text" placeholder="City" required>
-                    <input type="text" placeholder="Postal Code" required>
-                </div>
-                <div class="form-row">
-                    <input type="email" placeholder="Email Address" required>
-                </div>
-                <div class="form-row">
-                    <input type="tel" placeholder="Phone Number" required>
-                </div>
-                <button type="submit" class="checkout-button">Proceed to Checkout</button>
-            </form>
+            ${this.cartItems.length > 0 ? this.renderCheckoutForm() : ''}
         </div>
         
         <style>
@@ -232,13 +224,139 @@ export default class EsiroCart extends HTMLElement {
             }
         </style>`;
         
-        // Add event listeners
+        this.setupEventListeners();
+    }
+
+    renderEmptyCart() {
+        return `
+            <div class="cart-empty">
+                <p>Your cart is empty</p>
+                <button onclick="document.querySelector('esiro-network').showSection('products')" class="shop-button">
+                    Shop Now
+                </button>
+            </div>
+        `;
+    }
+
+    renderCartItems() {
+        return this.cartItems.map(item => `
+            <div class="cart-item" data-id="${item.id}">
+                <img src="${item.image}" alt="${item.name}" class="item-image">
+                <div class="item-details">
+                    <h3>${item.name}</h3>
+                    <p class="item-price">$${item.price}</p>
+                </div>
+                <div class="item-quantity">
+                    <button class="quantity-btn" data-action="decrease">-</button>
+                    <span>${item.quantity}</span>
+                    <button class="quantity-btn" data-action="increase">+</button>
+                </div>
+                <button class="remove-btn">✕</button>
+            </div>
+        `).join('');
+    }
+
+    renderCartSummary() {
+        const subtotal = this.cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        const shipping = 5.00; // Example shipping cost
+        const total = subtotal + shipping;
+
+        return `
+            <div class="cart-summary">
+                <div class="summary-row">
+                    <span>Subtotal:</span>
+                    <span>$${subtotal.toFixed(2)}</span>
+                </div>
+                <div class="summary-row">
+                    <span>Shipping:</span>
+                    <span>$${shipping.toFixed(2)}</span>
+                </div>
+                <div class="summary-row total">
+                    <span>Total:</span>
+                    <span>$${total.toFixed(2)}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    renderCheckoutForm() {
+        return `
+            <form class="checkout-form">
+                <h3>Shipping Information</h3>
+                <div class="form-row">
+                    <input type="text" placeholder="Full Name" required>
+                </div>
+                <div class="form-row">
+                    <input type="text" placeholder="Address" required>
+                </div>
+                <div class="form-row double">
+                    <input type="text" placeholder="City" required>
+                    <input type="text" placeholder="Postal Code" required>
+                </div>
+                <div class="form-row">
+                    <input type="email" placeholder="Email Address" required>
+                </div>
+                <div class="form-row">
+                    <input type="tel" placeholder="Phone Number" required>
+                </div>
+                <button type="submit" class="checkout-button">Proceed to Checkout</button>
+            </form>
+        `;
+    }
+
+    setupEventListeners() {
         const checkoutForm = this.querySelector('.checkout-form');
         if (checkoutForm) {
             checkoutForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 alert('Thank you for your order!');
             });
+        }
+
+        const quantityButtons = this.querySelectorAll('.quantity-btn');
+        quantityButtons.forEach(button => {
+            button.addEventListener('click', async (e) => {
+                const itemId = e.target.closest('.cart-item').dataset.id;
+                const action = e.target.dataset.action;
+                await this.updateQuantity(itemId, action);
+            });
+        });
+
+        const removeButtons = this.querySelectorAll('.remove-btn');
+        removeButtons.forEach(button => {
+            button.addEventListener('click', async (e) => {
+                const itemId = e.target.closest('.cart-item').dataset.id;
+                await this.removeItem(itemId);
+            });
+        });
+    }
+
+    async updateQuantity(itemId, action) {
+        try {
+            const item = this.cartItems.find(i => i.id === itemId);
+            if (!item) return;
+
+            const newQuantity = action === 'increase' ? item.quantity + 1 : item.quantity - 1;
+            
+            if (newQuantity > 0) {
+                await db.cart.update(itemId, { quantity: newQuantity });
+                await this.loadCartItems();
+                this.render();
+            } else {
+                await this.removeItem(itemId);
+            }
+        } catch (error) {
+            console.error('Error updating quantity:', error);
+        }
+    }
+
+    async removeItem(itemId) {
+        try {
+            await db.cart.delete(itemId);
+            await this.loadCartItems();
+            this.render();
+        } catch (error) {
+            console.error('Error removing item:', error);
         }
     }
 }

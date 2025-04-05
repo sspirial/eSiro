@@ -1,28 +1,20 @@
+import { db } from '../db.js';
+import { ProductService } from '../services/products.js';
+
 export default class EsiroMain extends HTMLElement {
-    connectedCallback() {
-        this.render();
+    async connectedCallback() {
+        await this.render();
+        await this.loadData();
     }
 
     render() {
         this.innerHTML = `
         <main>
             <section id="stores" class="hidden">
-                <div class="store-grid">
-                    <esiro-store name="Fashion Store" image="https://via.placeholder.com/150"></esiro-store>
-                    <esiro-store name="Grocery Market" image="https://via.placeholder.com/150"></esiro-store>
-                    <esiro-store name="Electronics Shop" image="https://via.placeholder.com/150"></esiro-store>
-                    <esiro-store name="Bookstore" image="https://via.placeholder.com/150"></esiro-store>
-                </div>
+                <div class="store-grid"></div>
             </section>
             <section id="products" class="hidden">
-                <div class="product-grid">
-                    <esiro-product name="Product 1" price="$19.99" image="https://via.placeholder.com/150"></esiro-product>
-                    <esiro-product name="Product 2" price="$24.99" image="https://via.placeholder.com/150"></esiro-product>
-                    <esiro-product name="Product 3" price="$15.99" image="https://via.placeholder.com/150"></esiro-product>
-                    <esiro-product name="Product 4" price="$29.99" image="https://via.placeholder.com/150"></esiro-product>
-                    <esiro-product name="Product 5" price="$34.99" image="https://via.placeholder.com/150"></esiro-product>
-                    <esiro-product name="Product 6" price="$12.99" image="https://via.placeholder.com/150"></esiro-product>
-                </div>
+                <div class="product-grid"></div>
             </section>
             <section id="data" class="hidden">
                 <esiro-table></esiro-table>
@@ -72,5 +64,43 @@ export default class EsiroMain extends HTMLElement {
                 }
             }
         </style>`;
+    }
+
+    async loadData() {
+        try {
+            const [stores, products] = await Promise.all([
+                db.stores.toArray(),
+                ProductService.getProducts()
+            ]);
+
+            const storeGrid = this.querySelector('.store-grid');
+            const productGrid = this.querySelector('.product-grid');
+
+            if (storeGrid) {
+                storeGrid.innerHTML = stores.map(store => `
+                    <esiro-store 
+                        name="${store.name}" 
+                        image="${store.image}"
+                        store-id="${store.id}"
+                        description="${store.description}"
+                    ></esiro-store>
+                `).join('');
+            }
+
+            if (productGrid) {
+                productGrid.innerHTML = products.map(product => `
+                    <esiro-product 
+                        name="${product.name}" 
+                        price="$${product.price}" 
+                        image="${product.image}"
+                        product-id="${product.id}"
+                        description="${product.description}"
+                        stock="${product.stock}"
+                    ></esiro-product>
+                `).join('');
+            }
+        } catch (error) {
+            console.error('Error loading data:', error);
+        }
     }
 }
