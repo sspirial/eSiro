@@ -1,13 +1,16 @@
 import Dexie from 'dexie';
 import { dexieCloud } from 'dexie-cloud-addon';
 
-// Create database instance with cloud support
+/**
+ * Database configuration with Dexie Cloud integration
+ * Implements buyer/vendor role system with proper realm structure
+ */
 const db = new Dexie('esiro', {
     addons: [dexieCloud]
 });
 
-// Define schema - using @ prefix for primary keys to enable cloud sync
-db.version(1).stores({
+// Schema definition - @ prefix enables cloud sync
+db.version(2).stores({
     products: '@id, name, price, stock, vendorId, image, description, *categories, realmId, ownerId',
     stores: '@id, name, image, description, realmId, ownerId',
     cart: '@id, productId, quantity, userId, ownerId',
@@ -16,35 +19,33 @@ db.version(1).stores({
     users: '@id, email, name, role'
 });
 
-// Initialize database
+/**
+ * Initialize the database with proper cloud configuration
+ * Sets up realm types and access control
+ */
 async function initDB() {
     try {
         if (import.meta.env.VITE_DATABASE_URL) {
-            // Configure cloud before opening database
             await db.cloud.configure({
                 databaseUrl: import.meta.env.VITE_DATABASE_URL,
-                // Enable sync for all tables (no unsyncedTables)
                 accessControl: {
-                    // Default access level for authenticated users
                     defaultAccess: 'authenticated',
                     
                     // Define realm types and access rules
                     realmTypes: {
                         // User's private realm - they are buyers by default
                         user: {
-                            // Define default roles and permissions for user realms
                             defaultRole: 'buyer',
                             roles: {
                                 buyer: {
-                                    // Permissions for buyers
-                                    cart: 'crud',      // Full access to their cart
-                                    orders: 'crud',    // Full access to their orders
-                                    orderItems: 'crud', // Full access to their order items
-                                    products: 'r',     // Can only read products
-                                    stores: 'r',       // Can only read stores
+                                    cart: 'crud',
+                                    orders: 'crud',
+                                    orderItems: 'crud',
+                                    products: 'r',
+                                    stores: 'r',
                                     users: {
-                                        read: 'own',   // Can read own user data
-                                        write: 'own'   // Can update own user data
+                                        read: 'own',
+                                        write: 'own'
                                     }
                                 }
                             }
@@ -52,19 +53,17 @@ async function initDB() {
                         
                         // Shop realm - where vendors control their products
                         shop: {
-                            // Define default roles and permissions for shop realms
                             defaultRole: 'vendor',
                             roles: {
                                 vendor: {
-                                    // Permissions for vendors in their shop realm
-                                    products: 'crud',  // Full access to their products
-                                    stores: 'crud',    // Full access to their store(s)
-                                    orders: 'r',       // Can read orders related to their products
-                                    orderItems: 'r',   // Can read order items related to their products
-                                    users: 'r'         // Can read basic user info of customers
+                                    products: 'crud',
+                                    stores: 'crud',
+                                    orders: 'r',
+                                    orderItems: 'r',
+                                    users: 'r'
                                 }
                             },
-                            // Shop realms are public - their products are visible to all
+                            // Public access for shop products
                             publicAccess: {
                                 products: 'r',
                                 stores: 'r'
@@ -75,19 +74,21 @@ async function initDB() {
             });
         }
         
-        // Open database after configuration
         await db.open();
-        
     } catch (error) {
         console.error('Failed to initialize database:', error);
         throw error;
     }
 }
 
-// Helper function to create a shop realm for a vendor
+/**
+ * Create a shop realm for a vendor
+ * @param {string} userId - The ID of the user
+ * @param {string} shopName - Name for the shop
+ * @returns {Promise<Object>} - Result with realmId and storeId
+ */
 export async function createVendorShop(userId, shopName) {
     try {
-        // First check if the user already has a shop realm
         const userRealms = await db.cloud.getRealmsForUser();
         const existingShopRealm = userRealms.find(realm => realm.type === 'shop');
         
@@ -96,15 +97,12 @@ export async function createVendorShop(userId, shopName) {
             return existingShopRealm;
         }
         
-        // Create a new shop realm for the vendor
         const realmInfo = await db.cloud.createRealm({
             type: 'shop',
             name: shopName
         });
         
-        console.log(`Created new shop realm: ${realmInfo.name} for user: ${userId}`);
-        
-        // Add a store for this vendor
+        // Create store for this vendor
         const storeId = crypto.randomUUID();
         await db.stores.add({
             id: storeId,
@@ -115,10 +113,8 @@ export async function createVendorShop(userId, shopName) {
             realmId: realmInfo.name
         });
         
-        // Update user role to include vendor status
-        await db.users.update(userId, {
-            role: 'vendor'
-        });
+        // Update user role
+        await db.users.update(userId, { role: 'vendor' });
         
         return { realmId: realmInfo.name, storeId };
     } catch (error) {
@@ -127,10 +123,13 @@ export async function createVendorShop(userId, shopName) {
     }
 }
 
-// Function to add product to vendor's shop
+/**
+ * Add a product to a vendor's shop
+ * @param {Object} product - Product data to add
+ * @returns {Promise<string|null>} - Product ID if successful
+ */
 export async function addProductToShop(product) {
     try {
-        // Get user's shop realm
         const userRealms = await db.cloud.getRealmsForUser();
         const shopRealm = userRealms.find(realm => realm.type === 'shop');
         
@@ -138,7 +137,6 @@ export async function addProductToShop(product) {
             throw new Error('User does not have a shop realm. Create one first.');
         }
         
-        // Get store ID for this vendor
         const store = await db.stores
             .where('realmId')
             .equals(shopRealm.name)
@@ -148,10 +146,8 @@ export async function addProductToShop(product) {
             throw new Error('Store not found for this vendor');
         }
         
-        // Get current user ID
         const user = await db.cloud.currentUser();
         
-        // Add product with proper realm and ownership
         const productId = crypto.randomUUID();
         await db.products.add({
             ...product,
@@ -164,14 +160,17 @@ export async function addProductToShop(product) {
         return productId;
     } catch (error) {
         console.error('Error adding product to shop:', error);
-        throw error;
+        return null;
     }
 }
 
-// Export database instance and initialization functions
+// Export database instance and functions
 export { db, initDB };
 
-// Export initialization function
+/**
+ * Initialize database and seed with demo data
+ * @returns {Promise<boolean>} - Success status
+ */
 export const initializeDatabase = async () => {
     try {
         await initDB();
@@ -183,15 +182,15 @@ export const initializeDatabase = async () => {
     }
 };
 
-// Seed data function
+/**
+ * Seed the database with demo data
+ */
 export async function seedData() {
     try {
         const productCount = await db.products.count();
         const storeCount = await db.stores.count();
         
-        // For demo purposes only - in production these would be created when users register
-        
-        // Check if we need to seed demo data
+        // Only seed if database is empty
         if (productCount === 0) {
             const demoShopRealm1 = 'shop/fashion-store';
             const demoShopRealm2 = 'shop/grocery-market';
@@ -269,7 +268,7 @@ export async function seedData() {
             ]);
         }
         
-        // Add sample users if needed
+        // Add sample users
         const userCount = await db.users.count();
         if (userCount === 0) {
             await db.users.bulkAdd([

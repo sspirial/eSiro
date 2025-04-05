@@ -1,31 +1,47 @@
 import { db } from '../db.js';
 import { createVendorShop } from '../db.js';
 
+/**
+ * Authentication and user management service
+ * Handles login, registration, and role management
+ */
 export class AuthService {
+    /**
+     * Check if a user is currently logged in
+     * @returns {boolean} Login status
+     */
     static isLoggedIn() {
         return localStorage.getItem('user') !== null;
     }
 
+    /**
+     * Get current user data from local storage
+     * @returns {Object|null} User data or null if not logged in
+     */
     static getUser() {
-        return JSON.parse(localStorage.getItem('user'));
+        const userData = localStorage.getItem('user');
+        return userData ? JSON.parse(userData) : null;
     }
     
+    /**
+     * Log in a user with email and password
+     * @param {string} email - User email
+     * @param {string} password - User password
+     * @returns {Promise<Object>} Login result with success status
+     */
     static async login(email, password) {
         try {
-            // For demo purposes - in a real app, you would authenticate against the server
             await db.cloud.signin({
-                email: email,
-                password: password
+                email,
+                password
             });
             
-            // Get the authenticated user
             const user = await db.cloud.currentUser();
             
             if (user) {
-                // Store user info in localStorage
                 localStorage.setItem('user', JSON.stringify({
                     id: user.id,
-                    email: email,
+                    email,
                     name: user.name || email.split('@')[0],
                     role: user.role || 'buyer'  // Default role is buyer
                 }));
@@ -36,10 +52,17 @@ export class AuthService {
             return { success: false, error: 'Authentication failed' };
         } catch (error) {
             console.error('Login error:', error);
-            return { success: false, error: error.message || 'Authentication failed' };
+            return { 
+                success: false, 
+                error: error.message || 'Authentication failed' 
+            };
         }
     }
     
+    /**
+     * Log out the current user
+     * @returns {Promise<Object>} Logout result
+     */
     static async logout() {
         try {
             await db.cloud.signout();
@@ -51,19 +74,25 @@ export class AuthService {
         }
     }
     
+    /**
+     * Register a new user
+     * @param {string} email - User email
+     * @param {string} password - User password
+     * @param {string} name - User's display name
+     * @returns {Promise<Object>} Registration result
+     */
     static async register(email, password, name) {
         try {
-            // Create user in Dexie Cloud
             const result = await db.cloud.register({
-                email: email,
-                password: password
+                email,
+                password
             });
             
             if (result.id) {
-                // Add user to users table with buyer role by default
+                // Add user with buyer role by default
                 await db.users.add({
                     id: result.id,
-                    email: email,
+                    email,
                     name: name || email.split('@')[0],
                     role: 'buyer'
                 });
@@ -75,19 +104,25 @@ export class AuthService {
             return { success: false, error: 'Registration failed' };
         } catch (error) {
             console.error('Registration error:', error);
-            return { success: false, error: error.message || 'Registration failed' };
+            return { 
+                success: false, 
+                error: error.message || 'Registration failed' 
+            };
         }
     }
     
+    /**
+     * Convert a buyer to a vendor by creating a shop
+     * @param {string} shopName - Name for the user's shop
+     * @returns {Promise<Object>} Vendor conversion result
+     */
     static async becomeVendor(shopName) {
         try {
-            // Get current user
             const user = this.getUser();
             if (!user) {
                 throw new Error('User not logged in');
             }
             
-            // Create shop realm for this user
             const result = await createVendorShop(user.id, shopName);
             
             if (result) {
@@ -105,21 +140,27 @@ export class AuthService {
         }
     }
     
+    /**
+     * Get realms associated with the current user
+     * @returns {Promise<Array>} List of realms
+     */
     static async getUserRealms() {
         try {
             if (!this.isLoggedIn()) {
                 return [];
             }
             
-            // Get realms for current user
-            const realms = await db.cloud.getRealmsForUser();
-            return realms;
+            return await db.cloud.getRealmsForUser();
         } catch (error) {
             console.error('Get user realms error:', error);
             return [];
         }
     }
     
+    /**
+     * Check if current user is a vendor
+     * @returns {boolean} Vendor status
+     */
     static isVendor() {
         const user = this.getUser();
         return user && user.role === 'vendor';

@@ -1,281 +1,173 @@
 import { db } from '../db.js';
 import { AuthService } from './auth.js';
 
+/**
+ * Product management service
+ * Handles CRUD operations for products
+ */
 export class ProductService {
-    static async getProducts() {
+    /**
+     * Get all products
+     * @param {Object} options - Filter options
+     * @returns {Promise<Array>} List of products
+     */
+    static async getAllProducts(options = {}) {
         try {
-            await db.open(); // Ensure database is open
-            return await db.products.toArray();
-        } catch (error) {
-            console.error('Error fetching products:', error);
-            return [];
-        }
-    }
-
-    static async getProductById(id) {
-        try {
-            await db.open();
-            const product = await db.products.get(id);
+            // Apply filters, sorting, etc.
+            const query = {};
             
-            if (product && product.vendorId) {
-                // Load store data and attach it to the product
-                const store = await db.stores.get(product.vendorId);
-                if (store) {
-                    product.storeData = store;
-                }
+            if (options.category) {
+                query.category = options.category;
             }
             
-            return product;
-        } catch (error) {
-            console.error('Error fetching product by ID:', error);
-            return null;
-        }
-    }
-
-    static async getProductsByStore(storeId) {
-        try {
-            await db.open();
-            return await db.products
-                .where('vendorId')
-                .equals(storeId)
+            if (options.minPrice || options.maxPrice) {
+                query.price = {};
+                if (options.minPrice) query.price.$gte = options.minPrice;
+                if (options.maxPrice) query.price.$lte = options.maxPrice;
+            }
+            
+            // Pagination
+            const limit = options.limit || 50;
+            const skip = options.page ? (options.page - 1) * limit : 0;
+            
+            return await db.products.find(query)
+                .sort(options.sort || { createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
                 .toArray();
         } catch (error) {
-            console.error('Error fetching products by store:', error);
+            console.error('Get all products error:', error);
             return [];
-        }
-    }
-
-    static async addToCart(productId, userId = null) {
-        try {
-            // Get current user ID if not provided
-            if (!userId) {
-                const user = AuthService.getUser();
-                if (!user) {
-                    throw new Error('User not logged in');
-                }
-                userId = user.id;
-            }
-            
-            const product = await this.getProductById(productId);
-            if (!product) {
-                throw new Error('Product not found');
-            }
-            
-            const existingItem = await db.cart
-                .where({ productId, userId })
-                .first();
-
-            if (existingItem) {
-                await db.cart.update(existingItem.id, {
-                    quantity: existingItem.quantity + 1
-                });
-            } else {
-                // Add cart item with current user as owner
-                await db.cart.add({
-                    id: crypto.randomUUID(),
-                    productId,
-                    userId,
-                    quantity: 1,
-                    ownerId: userId
-                });
-            }
-            return true;
-        } catch (error) {
-            console.error('Error adding to cart:', error);
-            return false;
-        }
-    }
-
-    static async updateProduct(productData) {
-        try {
-            await db.open();
-            if (!productData.id) {
-                throw new Error('Product ID required for update');
-            }
-            
-            // Check if user is the vendor who owns this product
-            const user = AuthService.getUser();
-            if (!user || !AuthService.isVendor()) {
-                throw new Error('Permission denied: only vendors can update products');
-            }
-            
-            const product = await db.products.get(productData.id);
-            if (!product) {
-                throw new Error('Product not found');
-            }
-            
-            // Check if this product belongs to the user's realm
-            const userRealms = await AuthService.getUserRealms();
-            const shopRealm = userRealms.find(realm => realm.type === 'shop');
-            
-            if (!shopRealm || product.realmId !== shopRealm.name) {
-                throw new Error('Permission denied: you can only update products in your shop');
-            }
-            
-            // Update the product
-            await db.products.update(productData.id, {
-                ...productData,
-                // Keep ownership and realm data
-                ownerId: product.ownerId,
-                realmId: product.realmId
-            });
-            
-            return true;
-        } catch (error) {
-            console.error('Error updating product:', error);
-            return false;
-        }
-    }
-
-    static async addProduct(productData) {
-        try {
-            // Check if user is a vendor
-            const user = AuthService.getUser();
-            if (!user || !AuthService.isVendor()) {
-                throw new Error('Permission denied: only vendors can add products');
-            }
-            
-            // Get user's shop realm
-            const userRealms = await AuthService.getUserRealms();
-            const shopRealm = userRealms.find(realm => realm.type === 'shop');
-            
-            if (!shopRealm) {
-                throw new Error('Vendor shop not found. Please create a shop first.');
-            }
-            
-            // Get store for this vendor
-            const store = await db.stores
-                .where('realmId')
-                .equals(shopRealm.name)
-                .first();
-                
-            if (!store) {
-                throw new Error('Store not found for this vendor');
-            }
-            
-            // Add product with proper realm and ownership details
-            const productId = crypto.randomUUID();
-            await db.products.add({
-                ...productData,
-                id: productId,
-                vendorId: store.id,
-                ownerId: user.id,
-                realmId: shopRealm.name
-            });
-            
-            // Update product count for the store
-            await this.updateStoreProductCount(store.id);
-            
-            return productId;
-        } catch (error) {
-            console.error('Error adding product:', error);
-            return null;
-        }
-    }
-
-    static async deleteProduct(productId) {
-        try {
-            // Check if user is a vendor
-            const user = AuthService.getUser();
-            if (!user || !AuthService.isVendor()) {
-                throw new Error('Permission denied: only vendors can delete products');
-            }
-            
-            // Get the product
-            const product = await db.products.get(productId);
-            if (!product) {
-                throw new Error('Product not found');
-            }
-            
-            // Verify ownership
-            const userRealms = await AuthService.getUserRealms();
-            const shopRealm = userRealms.find(realm => realm.type === 'shop');
-            
-            if (!shopRealm || product.realmId !== shopRealm.name) {
-                throw new Error('Permission denied: you can only delete products in your shop');
-            }
-            
-            // Capture vendorId before deletion
-            const vendorId = product.vendorId;
-            
-            // Delete the product
-            await db.products.delete(productId);
-            
-            // Update store product count
-            if (vendorId) {
-                await this.updateStoreProductCount(vendorId);
-            }
-            
-            return true;
-        } catch (error) {
-            console.error('Error deleting product:', error);
-            return false;
-        }
-    }
-
-    static async updateStoreProductCount(storeId) {
-        try {
-            const productCount = await db.products
-                .where('vendorId')
-                .equals(storeId)
-                .count();
-            
-            // Update store.productCount field if it exists
-            const store = await db.stores.get(storeId);
-            if (store) {
-                await db.stores.update(storeId, { 
-                    ...store,
-                    productCount
-                });
-            }
-            
-            // Update all visible store components with this ID
-            const storeElements = document.querySelectorAll(`esiro-store[store-id="${storeId}"]`);
-            storeElements.forEach(storeElement => {
-                storeElement.setAttribute('product-count', productCount.toString());
-                
-                // If the store is in expanded mode, refresh its products
-                if (storeElement.classList.contains('expanded')) {
-                    this.getProductsByStore(storeId).then(products => {
-                        if (typeof storeElement.storeProducts !== 'undefined') {
-                            storeElement.storeProducts = products;
-                        }
-                        if (typeof storeElement.renderStoreProducts === 'function') {
-                            storeElement.renderStoreProducts(products);
-                        }
-                    });
-                }
-            });
-            
-        } catch (error) {
-            console.error('Error updating store product count:', error);
         }
     }
     
-    // Get products from the current vendor's shop
+    /**
+     * Get a single product by ID
+     * @param {string} productId - Product ID
+     * @returns {Promise<Object|null>} Product object or null if not found
+     */
+    static async getProductById(productId) {
+        try {
+            return await db.products.findOne({ _id: productId });
+        } catch (error) {
+            console.error('Get product by ID error:', error);
+            return null;
+        }
+    }
+    
+    /**
+     * Add a new product (vendor only)
+     * @param {Object} productData - Product data
+     * @returns {Promise<string|null>} Product ID or null if failed
+     */
+    static async addProduct(productData) {
+        try {
+            const user = AuthService.getUser();
+            
+            if (!user || !AuthService.isVendor()) {
+                throw new Error('Only vendors can add products');
+            }
+            
+            // Add vendor information to the product
+            const product = {
+                ...productData,
+                vendorId: user.id,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+            
+            const result = await db.products.insertOne(product);
+            return result.insertedId;
+        } catch (error) {
+            console.error('Add product error:', error);
+            return null;
+        }
+    }
+    
+    /**
+     * Update a product (vendor only)
+     * @param {string} productId - Product ID
+     * @param {Object} updateData - Updated product data
+     * @returns {Promise<boolean>} Success status
+     */
+    static async updateProduct(productId, updateData) {
+        try {
+            const user = AuthService.getUser();
+            
+            if (!user || !AuthService.isVendor()) {
+                throw new Error('Only vendors can update products');
+            }
+            
+            // Verify ownership
+            const product = await this.getProductById(productId);
+            if (!product || product.vendorId !== user.id) {
+                throw new Error('Product not found or you don\'t have permission to update it');
+            }
+            
+            // Update the product
+            const result = await db.products.updateOne(
+                { _id: productId },
+                { 
+                    $set: {
+                        ...updateData,
+                        updatedAt: new Date().toISOString()
+                    }
+                }
+            );
+            
+            return result.modifiedCount > 0;
+        } catch (error) {
+            console.error('Update product error:', error);
+            return false;
+        }
+    }
+    
+    /**
+     * Delete a product (vendor only)
+     * @param {string} productId - Product ID
+     * @returns {Promise<boolean>} Success status
+     */
+    static async deleteProduct(productId) {
+        try {
+            const user = AuthService.getUser();
+            
+            if (!user || !AuthService.isVendor()) {
+                throw new Error('Only vendors can delete products');
+            }
+            
+            // Verify ownership
+            const product = await this.getProductById(productId);
+            if (!product || product.vendorId !== user.id) {
+                throw new Error('Product not found or you don\'t have permission to delete it');
+            }
+            
+            // Delete the product
+            const result = await db.products.deleteOne({ _id: productId });
+            
+            return result.deletedCount > 0;
+        } catch (error) {
+            console.error('Delete product error:', error);
+            return false;
+        }
+    }
+    
+    /**
+     * Get products for the current vendor
+     * @returns {Promise<Array>} List of vendor's products
+     */
     static async getMyProducts() {
         try {
-            // Check if user is a vendor
             const user = AuthService.getUser();
+            
             if (!user || !AuthService.isVendor()) {
-                return [];
+                throw new Error('Only vendors can access their products');
             }
             
-            // Get user's shop realm
-            const userRealms = await AuthService.getUserRealms();
-            const shopRealm = userRealms.find(realm => realm.type === 'shop');
-            
-            if (!shopRealm) {
-                return [];
-            }
-            
-            // Get products in this realm
-            return await db.products
-                .where('realmId')
-                .equals(shopRealm.name)
+            return await db.products.find({ vendorId: user.id })
+                .sort({ createdAt: -1 })
                 .toArray();
         } catch (error) {
-            console.error('Error fetching vendor products:', error);
+            console.error('Get vendor products error:', error);
             return [];
         }
     }

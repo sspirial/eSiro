@@ -1,62 +1,93 @@
 import { db } from '../db.js';
+import { AuthService } from '../services/auth.js';
 
+/**
+ * Cart component for displaying and managing shopping cart
+ * Handles item display, quantity updates, and checkout flow
+ */
 export default class EsiroCart extends HTMLElement {
+    /**
+     * Items in the cart
+     * @type {Array}
+     */
+    #cartItems = [];
+
     constructor() {
         super();
-        this.cartItems = [];
     }
 
+    /**
+     * Web Component lifecycle - called when component is added to DOM
+     */
     async connectedCallback() {
         try {
-            await db.open(); // Ensure database is open
             await this.loadCartItems();
             this.render();
         } catch (error) {
             console.error('Error initializing cart:', error);
-            this.cartItems = [];
+            this.#cartItems = [];
             this.render();
         }
     }
 
+    /**
+     * Load cart items with associated product data
+     */
     async loadCartItems() {
         try {
-            const userId = 'current-user';
+            await db.open(); // Ensure database is open
+            
+            const userId = this.getCurrentUserId();
             const cartItems = await db.cart
                 .where('userId')
                 .equals(userId)
                 .toArray();
 
             if (cartItems.length === 0) {
-                this.cartItems = [];
+                this.#cartItems = [];
                 return;
             }
 
+            // Get product data for cart items
             const productIds = cartItems.map(item => item.productId);
-            const products = await db.products
-                .bulkGet(productIds);
+            const products = await db.products.bulkGet(productIds);
 
-            this.cartItems = cartItems.map((item, index) => ({
+            // Combine cart items with product data
+            this.#cartItems = cartItems.map((item, index) => ({
                 ...item,
                 ...products[index]
             }));
         } catch (error) {
             console.error('Error loading cart items:', error);
-            this.cartItems = [];
+            this.#cartItems = [];
         }
     }
+    
+    /**
+     * Get current user ID
+     * @returns {string} User ID
+     * @private
+     */
+    getCurrentUserId() {
+        const user = AuthService.getUser();
+        return user?.id || 'current-user';
+    }
 
+    /**
+     * Render the cart UI
+     */
     render() {
         this.innerHTML = `
         <div class="cart-container">
             <h2>Shopping Cart</h2>
             
             <div class="cart-items">
-                ${this.cartItems.length === 0 ? this.renderEmptyCart() : this.renderCartItems()}
+                ${this.#cartItems.length === 0 ? this.renderEmptyCart() : this.renderCartItems()}
             </div>
             
-            ${this.cartItems.length > 0 ? this.renderCartSummary() : ''}
+            ${this.#cartItems.length > 0 ? this.renderCartSummary() : ''}
             
-            ${this.cartItems.length > 0 ? this.renderCheckoutForm() : ''}
+            ${this.#cartItems.length > 0 ? this.renderCheckoutForm() : ''}
         </div>
         
         <style>
@@ -227,38 +258,53 @@ export default class EsiroCart extends HTMLElement {
         this.setupEventListeners();
     }
 
+    /**
+     * Render empty cart state
+     * @returns {string} HTML for empty cart
+     * @private
+     */
     renderEmptyCart() {
         return `
             <div class="cart-empty">
                 <p>Your cart is empty</p>
-                <button onclick="document.querySelector('esiro-network').showSection('products')" class="shop-button">
+                <button class="shop-button">
                     Shop Now
                 </button>
             </div>
         `;
     }
 
+    /**
+     * Render cart items
+     * @returns {string} HTML for cart items
+     * @private
+     */
     renderCartItems() {
-        return this.cartItems.map(item => `
+        return this.#cartItems.map(item => `
             <div class="cart-item" data-id="${item.id}">
-                <img src="${item.image}" alt="${item.name}" class="item-image">
+                <img src="${item.image || 'https://via.placeholder.com/150'}" alt="${item.name}" class="item-image">
                 <div class="item-details">
                     <h3>${item.name}</h3>
                     <p class="item-price">$${item.price}</p>
                 </div>
                 <div class="item-quantity">
-                    <button class="quantity-btn" data-action="decrease">-</button>
+                    <button class="quantity-btn" data-action="decrease" aria-label="Decrease quantity">-</button>
                     <span>${item.quantity}</span>
-                    <button class="quantity-btn" data-action="increase">+</button>
+                    <button class="quantity-btn" data-action="increase" aria-label="Increase quantity">+</button>
                 </div>
-                <button class="remove-btn">✕</button>
+                <button class="remove-btn" aria-label="Remove item">✕</button>
             </div>
         `).join('');
     }
 
+    /**
+     * Render cart summary with totals
+     * @returns {string} HTML for cart summary
+     * @private
+     */
     renderCartSummary() {
-        const subtotal = this.cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-        const shipping = 5.00; // Example shipping cost
+        const subtotal = this.calculateSubtotal();
+        const shipping = 5.00; // Fixed shipping cost
         const total = subtotal + shipping;
 
         return `
@@ -279,61 +325,186 @@ export default class EsiroCart extends HTMLElement {
         `;
     }
 
+    /**
+     * Calculate cart subtotal
+     * @returns {number} Subtotal amount
+     * @private
+     */
+    calculateSubtotal() {
+        return this.#cartItems.reduce((sum, item) => 
+            sum + (item.price * item.quantity), 0);
+    }
+
+    /**
+     * Render checkout form
+     * @returns {string} HTML for checkout form
+     * @private
+     */
     renderCheckoutForm() {
         return `
             <form class="checkout-form">
                 <h3>Shipping Information</h3>
                 <div class="form-row">
-                    <input type="text" placeholder="Full Name" required>
+                    <input type="text" placeholder="Full Name" required aria-label="Full Name">
                 </div>
                 <div class="form-row">
-                    <input type="text" placeholder="Address" required>
+                    <input type="text" placeholder="Address" required aria-label="Address">
                 </div>
                 <div class="form-row double">
-                    <input type="text" placeholder="City" required>
-                    <input type="text" placeholder="Postal Code" required>
+                    <input type="text" placeholder="City" required aria-label="City">
+                    <input type="text" placeholder="Postal Code" required aria-label="Postal Code">
                 </div>
                 <div class="form-row">
-                    <input type="email" placeholder="Email Address" required>
+                    <input type="email" placeholder="Email Address" required aria-label="Email Address">
                 </div>
                 <div class="form-row">
-                    <input type="tel" placeholder="Phone Number" required>
+                    <input type="tel" placeholder="Phone Number" required aria-label="Phone Number">
                 </div>
                 <button type="submit" class="checkout-button">Proceed to Checkout</button>
             </form>
         `;
     }
 
+    /**
+     * Set up event listeners for cart actions
+     * @private
+     */
     setupEventListeners() {
-        const checkoutForm = this.querySelector('.checkout-form');
-        if (checkoutForm) {
-            checkoutForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                alert('Thank you for your order!');
+        // Shop button for empty cart
+        const shopButton = this.querySelector('.shop-button');
+        if (shopButton) {
+            shopButton.addEventListener('click', () => {
+                const network = document.querySelector('esiro-network');
+                if (network && typeof network.showSection === 'function') {
+                    network.showSection('products');
+                }
             });
         }
 
+        // Checkout form
+        const checkoutForm = this.querySelector('.checkout-form');
+        if (checkoutForm) {
+            checkoutForm.addEventListener('submit', this.handleCheckout.bind(this));
+        }
+
+        // Quantity buttons
         const quantityButtons = this.querySelectorAll('.quantity-btn');
         quantityButtons.forEach(button => {
-            button.addEventListener('click', async (e) => {
-                const itemId = e.target.closest('.cart-item').dataset.id;
-                const action = e.target.dataset.action;
-                await this.updateQuantity(itemId, action);
-            });
+            button.addEventListener('click', this.handleQuantityChange.bind(this));
         });
 
+        // Remove buttons
         const removeButtons = this.querySelectorAll('.remove-btn');
         removeButtons.forEach(button => {
-            button.addEventListener('click', async (e) => {
-                const itemId = e.target.closest('.cart-item').dataset.id;
-                await this.removeItem(itemId);
-            });
+            button.addEventListener('click', this.handleRemoveItem.bind(this));
         });
     }
 
+    /**
+     * Handle checkout form submission
+     * @param {Event} event - Form submission event
+     * @private
+     */
+    handleCheckout(event) {
+        event.preventDefault();
+        this.createOrder()
+            .then(() => {
+                this.showNotification('Thank you for your order!');
+                this.clearCart();
+            })
+            .catch(error => {
+                console.error('Checkout error:', error);
+                this.showNotification('An error occurred during checkout', 'error');
+            });
+    }
+
+    /**
+     * Create an order from cart items
+     * @returns {Promise<string>} Order ID
+     * @private
+     */
+    async createOrder() {
+        try {
+            const userId = this.getCurrentUserId();
+            const subtotal = this.calculateSubtotal();
+            const shipping = 5.00;
+            const total = subtotal + shipping;
+            
+            // Create order
+            const orderId = crypto.randomUUID();
+            await db.orders.add({
+                id: orderId,
+                userId,
+                total,
+                status: 'pending',
+                date: new Date().toISOString(),
+                ownerId: userId
+            });
+            
+            // Create order items
+            const orderItems = this.#cartItems.map(item => ({
+                id: crypto.randomUUID(),
+                orderId,
+                productId: item.productId,
+                quantity: item.quantity,
+                price: item.price,
+                ownerId: userId
+            }));
+            
+            await db.orderItems.bulkAdd(orderItems);
+            
+            return orderId;
+        } catch (error) {
+            console.error('Error creating order:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Clear all items from cart
+     * @private
+     */
+    async clearCart() {
+        try {
+            const userId = this.getCurrentUserId();
+            await db.cart.where('userId').equals(userId).delete();
+            this.#cartItems = [];
+            this.render();
+        } catch (error) {
+            console.error('Error clearing cart:', error);
+        }
+    }
+
+    /**
+     * Handle quantity change button clicks
+     * @param {Event} event - Click event
+     * @private
+     */
+    async handleQuantityChange(event) {
+        const itemId = event.target.closest('.cart-item').dataset.id;
+        const action = event.target.dataset.action;
+        await this.updateQuantity(itemId, action);
+    }
+    
+    /**
+     * Handle remove item button clicks
+     * @param {Event} event - Click event
+     * @private
+     */
+    async handleRemoveItem(event) {
+        const itemId = event.target.closest('.cart-item').dataset.id;
+        await this.removeItem(itemId);
+    }
+
+    /**
+     * Update quantity of cart item
+     * @param {string} itemId - Cart item ID
+     * @param {string} action - 'increase' or 'decrease'
+     * @private
+     */
     async updateQuantity(itemId, action) {
         try {
-            const item = this.cartItems.find(i => i.id === itemId);
+            const item = this.#cartItems.find(i => i.id === itemId);
             if (!item) return;
 
             const newQuantity = action === 'increase' ? item.quantity + 1 : item.quantity - 1;
@@ -347,9 +518,15 @@ export default class EsiroCart extends HTMLElement {
             }
         } catch (error) {
             console.error('Error updating quantity:', error);
+            this.showNotification('Error updating quantity', 'error');
         }
     }
 
+    /**
+     * Remove item from cart
+     * @param {string} itemId - Cart item ID
+     * @private
+     */
     async removeItem(itemId) {
         try {
             await db.cart.delete(itemId);
@@ -357,6 +534,28 @@ export default class EsiroCart extends HTMLElement {
             this.render();
         } catch (error) {
             console.error('Error removing item:', error);
+            this.showNotification('Error removing item', 'error');
         }
+    }
+    
+    /**
+     * Show a notification message
+     * @param {string} message - Message to display
+     * @param {string} [type='success'] - Notification type (success/error)
+     * @private
+     */
+    showNotification(message, type = 'success') {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+        notification.setAttribute('role', 'alert');
+        
+        document.body.appendChild(notification);
+        
+        // Auto-remove after 3 seconds
+        setTimeout(() => {
+            notification.classList.add('fade-out');
+            setTimeout(() => notification.remove(), 500);
+        }, 3000);
     }
 }
