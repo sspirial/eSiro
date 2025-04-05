@@ -12,6 +12,7 @@
     "vite": "^6.2.0"
   },
   "dependencies": {
+    "@material-design-icons/font": "^0.14.15",
     "dexie": "^4.0.11",
     "dexie-cloud-addon": "^4.0.11"
   }
