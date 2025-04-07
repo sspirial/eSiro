@@ -14,7 +14,6 @@ export default class EsiroHeader extends HTMLElement {
         this.render();
         this.setupEventListeners();
         this.updateThemeIcon();
-        this.updateLoginState();
     }
 
     /**
@@ -40,7 +39,6 @@ export default class EsiroHeader extends HTMLElement {
                 <a href="#" id="account" aria-label="Account">
                     <span class="fas fa-user"></span>
                 </a>
-                <div id="login-status"></div>
             </div>
         </div>
         
@@ -153,30 +151,11 @@ export default class EsiroHeader extends HTMLElement {
             }
             
             #login-status {
-                font-size: 14px;
-                margin-left: 10px;
-                display: flex;
-                align-items: center;
+                display: none; /* Hide login status completely */
             }
             
-            .login-button {
-                background-color: var(--primary-accent);
-                color: white;
-                border: none;
-                border-radius: var(--border-radius);
-                padding: 6px 12px;
-                cursor: pointer;
-                font-size: 14px;
-            }
-            
-            .logout-button {
-                background: none;
-                border: none;
-                color: var(--text-secondary);
-                cursor: pointer;
-                text-decoration: underline;
-                padding: 6px;
-                font-size: 14px;
+            .login-button, .logout-button {
+                display: none; /* Hide login/logout buttons */
             }
             
             /* Hide FAB on large screens */
@@ -365,10 +344,7 @@ export default class EsiroHeader extends HTMLElement {
      */
     handleAccountClick(event) {
         event.preventDefault();
-        const mainContent = document.querySelector('main');
-        if (mainContent) {
-            mainContent.innerHTML = '<esiro-account></esiro-account>';
-        }
+        RouterService.navigate('/eSiro/account');
     }
     
     /**
@@ -430,46 +406,6 @@ export default class EsiroHeader extends HTMLElement {
         if (searchModal) {
             searchModal.style.display = 'none';
             searchModal.setAttribute('aria-hidden', 'true');
-        }
-    }
-    
-    /**
-     * Update login/logout button based on authentication state
-     */
-    updateLoginState() {
-        const loginStatus = this.querySelector('#login-status');
-        if (!loginStatus) return;
-        
-        if (AuthService.isLoggedIn()) {
-            const user = AuthService.getUser();
-            loginStatus.innerHTML = `
-                <span>Hi, ${user.name || 'User'}</span>
-                <button class="logout-button">Logout</button>
-            `;
-            
-            loginStatus.querySelector('.logout-button')?.addEventListener('click', this.handleLogout.bind(this));
-        } else {
-            loginStatus.innerHTML = `
-                <button class="login-button">Login</button>
-            `;
-            
-            loginStatus.querySelector('.login-button')?.addEventListener('click', () => {
-                RouterService.navigate('/eSiro/account');
-            });
-        }
-    }
-    
-    /**
-     * Handle logout button click
-     * @private
-     */
-    async handleLogout() {
-        try {
-            await AuthService.logout();
-            this.updateLoginState();
-            RouterService.navigate('/eSiro/');
-        } catch (error) {
-            console.error('Logout error:', error);
         }
     }
 }
