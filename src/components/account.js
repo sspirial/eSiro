@@ -1,21 +1,23 @@
 import { AuthService } from '../services/auth.js';
-import { ProductService } from '../services/products.js';
 import { RouterService } from '../services/router.js';
 import { db } from '../db.js';
 
 export default class EsiroAccount extends HTMLElement {
-    connectedCallback() {
+    async connectedCallback() {
         try {
+            // Get the authenticated user
             const user = AuthService.getUser();
+            
+            // If no user is authenticated, redirect to login
             if (!user) {
-                this.renderError('User not logged in. Please log in to access your account.');
+                RouterService.navigate('/eSiro/');
                 return;
             }
 
             this.innerHTML = `
                 <div class="account-page">
                     <h1>My Account</h1>
-                    ${user ? this.renderUserAccount(user) : this.renderLogin()}
+                    ${this.renderUserAccount(user)}
                     <style>
                         .account-page {
                             padding: 20px;
@@ -127,6 +129,33 @@ export default class EsiroAccount extends HTMLElement {
                             flex-direction: column;
                             gap: 10px;
                         }
+                        .notification {
+                            position: fixed;
+                            top: 60px;
+                            right: 20px;
+                            padding: 10px 20px;
+                            border-radius: var(--border-radius);
+                            background-color: #4CAF50;
+                            color: white;
+                            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                            z-index: 1100;
+                            transition: opacity 0.5s ease;
+                        }
+                        .notification.error {
+                            background-color: #f44336;
+                        }
+                        .notification.fade-out {
+                            opacity: 0;
+                        }
+                        .logout-btn {
+                            padding: 8px 16px;
+                            background-color: #f5f5f5;
+                            color: #333;
+                            border: 1px solid #ddd;
+                            border-radius: var(--border-radius);
+                            cursor: pointer;
+                            margin-top: 10px;
+                        }
                     </style>
                 </div>`;
 
@@ -168,7 +197,12 @@ export default class EsiroAccount extends HTMLElement {
             <div class="become-vendor-section">
                 <h2>Become a Vendor</h2>
                 <p>Want to sell products on our platform? Become a vendor today!</p>
-                <button id="become-vendor-btn" class="become-vendor-btn">Become a Vendor</button>
+                <form id="become-vendor-form" class="product-form">
+                    <input type="text" id="store-name" placeholder="Store Name" required>
+                    <textarea id="store-description" placeholder="Store Description" required></textarea>
+                    <input type="text" id="store-image" value="https://via.placeholder.com/150" placeholder="Store Image URL">
+                    <button type="submit" id="become-vendor-btn" class="become-vendor-btn">Become a Vendor</button>
+                </form>
             </div>`;
     }
 
@@ -183,7 +217,7 @@ export default class EsiroAccount extends HTMLElement {
                     <input type="text" name="name" placeholder="Product Name" required>
                     <textarea name="description" placeholder="Product Description" required></textarea>
                     <input type="number" name="price" placeholder="Price" min="0" step="0.01" required>
-                    <input type="text" name="image" placeholder="Image URL (optional)">
+                    <input type="text" name="image" placeholder="Image URL" value="https://via.placeholder.com/150">
                     <select name="category" required>
                         <option value="">Select Category</option>
                         <option value="electronics">Electronics</option>
@@ -204,29 +238,10 @@ export default class EsiroAccount extends HTMLElement {
             </div>`;
     }
 
-    renderLogin() {
-        return `
-            <div class="login-form">
-                <form id="loginForm">
-                    <input type="email" placeholder="Email" required>
-                    <input type="password" placeholder="Password" required>
-                    <button type="submit">Login</button>
-                </form>
-            </div>`;
-    }
-
     setupEventListeners() {
-        const loginForm = this.querySelector('#loginForm');
         const logoutBtn = this.querySelector('#logout');
         const addProductForm = this.querySelector('#addProductForm');
-        const becomeVendorBtn = this.querySelector('#become-vendor-btn');
-
-        if (loginForm) {
-            loginForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                // Implement login logic here
-            });
-        }
+        const becomeVendorForm = this.querySelector('#become-vendor-form');
 
         if (logoutBtn) {
             logoutBtn.addEventListener('click', async () => {
@@ -242,7 +257,7 @@ export default class EsiroAccount extends HTMLElement {
                     name: addProductForm.name.value.trim(),
                     description: addProductForm.description.value.trim(),
                     price: parseFloat(addProductForm.price.value),
-                    image: addProductForm.image.value.trim() || 'https://via.placeholder.com/150',
+                    image: addProductForm.image.value.trim(),
                     category: addProductForm.category.value,
                     stock: parseInt(addProductForm.stock.value),
                     createdAt: new Date().toISOString()
@@ -252,84 +267,85 @@ export default class EsiroAccount extends HTMLElement {
             });
         }
 
-        if (becomeVendorBtn) {
-            becomeVendorBtn.addEventListener('click', async () => {
-                await this.handleBecomeVendor();
+        if (becomeVendorForm) {
+            becomeVendorForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const storeName = document.getElementById('store-name').value.trim();
+                const storeDescription = document.getElementById('store-description').value.trim();
+                const storeImage = document.getElementById('store-image').value.trim();
+                
+                await this.handleBecomeVendor(storeName, storeDescription, storeImage);
             });
         }
     }
 
-    async handleBecomeVendor() {
+    async handleBecomeVendor(storeName, storeDescription, storeImage) {
         try {
+            const messageDiv = document.createElement('div');
+            messageDiv.innerHTML = '<p>Processing your request...</p>';
+            messageDiv.className = 'vendor-message';
+            const becomeVendorSection = this.querySelector('.become-vendor-section');
+            becomeVendorSection.appendChild(messageDiv);
+            
             const user = AuthService.getUser();
             if (!user) {
                 throw new Error('You must be logged in to become a vendor');
             }
 
-            // 1. Change user role to seller/vendor
-            await this.updateUserRole(user.id, 'vendor');
-
-            // 2. Create a new store (public realm) in the database
-            const storeId = await this.createStore(user);
-
-            // 3. Show success message and redirect to vendor dashboard
+            // 1. Create a new shop realm where the user will be the vendor
+            const realmId = 'shop/' + storeName.toLowerCase().replace(/\s+/g, '-');
+            
+            // 2. Create a new store in the database
+            const storeId = crypto.randomUUID();
+            await db.stores.add({
+                id: storeId,
+                name: storeName,
+                description: storeDescription,
+                image: storeImage || 'https://via.placeholder.com/150',
+                realmId: realmId,
+                owner: user.id,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            });
+            
+            // 3. Create a new realm for this store
+            await db.realms.add({
+                realmId: realmId,
+                type: 'shop',
+                name: storeName,
+                owner: user.id,
+                represents: 'store'
+            });
+            
+            // 4. Add the user as a member of this realm with the 'vendor' role
+            await db.members.add({
+                id: crypto.randomUUID(),
+                realmId: realmId,
+                userId: user.id,
+                email: user.email,
+                name: user.name,
+                roles: ['vendor'],
+                accepted: new Date().toISOString()
+            });
+            
+            // 5. Update user role in the database
+            await db.users.update(user.id, { role: 'vendor' });
+            
+            // 6. Update local user in session
+            user.role = 'vendor';
+            AuthService.updateCurrentUser(user);
+            
+            // 7. Show success message
             this.showNotification('Congratulations! You are now a vendor.');
             
-            // 4. Refresh the page to show vendor dashboard
+            // 8. Redirect to vendor dashboard
             setTimeout(() => {
-                window.location.reload();
+                RouterService.navigate('/eSiro/vendor-dashboard');
             }, 1500);
+            
         } catch (error) {
             console.error('Error becoming vendor:', error);
             this.showNotification(`Error: ${error.message}`, 'error');
-        }
-    }
-
-    async updateUserRole(userId, role) {
-        try {
-            await db.open();
-            const user = await db.users.get(userId);
-            
-            if (!user) {
-                throw new Error('User not found');
-            }
-
-            // Update user role
-            user.role = role;
-            await db.users.put(user);
-
-            // Update local user in AuthService
-            AuthService.updateCurrentUser(user);
-
-            return true;
-        } catch (error) {
-            console.error('Error updating user role:', error);
-            throw error;
-        }
-    }
-
-    async createStore(user) {
-        try {
-            await db.open();
-            
-            // Create a new store
-            const storeId = crypto.randomUUID();
-            const store = {
-                id: storeId,
-                name: `${user.name || 'User'}'s Store`,
-                description: `Welcome to ${user.name || 'User'}'s Store!`,
-                image: 'https://via.placeholder.com/300',
-                ownerId: user.id,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                productCount: 0
-            };
-
-            await db.stores.add(store);
-            return storeId;
-        } catch (error) {
-            console.error('Error creating store:', error);
-            throw error;
         }
     }
 
@@ -360,28 +376,42 @@ export default class EsiroAccount extends HTMLElement {
                 throw new Error('Only vendors can add products');
             }
             
-            // Get the user's store
-            const store = await db.stores.where('ownerId').equals(user.id).first();
+            // Find the realm where the user is a vendor
+            const userMemberships = await db.members
+                .where('userId')
+                .equals(user.id)
+                .and(member => member.roles && member.roles.includes('vendor'))
+                .toArray();
+            
+            if (userMemberships.length === 0) {
+                throw new Error('No vendor store found for this user');
+            }
+            
+            // Get the first store realm where the user is a vendor
+            const storeRealm = userMemberships[0].realmId;
+            
+            // Get the store associated with this realm
+            const store = await db.stores
+                .where('realmId')
+                .equals(storeRealm)
+                .first();
             
             if (!store) {
                 throw new Error('Store not found');
             }
             
-            // Add product to database
+            // Add product to the same realm as the store
             const productId = crypto.randomUUID();
             const product = {
                 id: productId,
                 ...productData,
                 vendorId: store.id,
-                ownerId: user.id
+                owner: user.id,
+                realmId: storeRealm,
+                categories: [productData.category]
             };
             
             await db.products.add(product);
-            
-            // Update store product count
-            store.productCount = (store.productCount || 0) + 1;
-            store.updatedAt = new Date().toISOString();
-            await db.stores.put(store);
             
             messageDiv.innerHTML = '<p class="success-message">Product added successfully!</p>';
             this.querySelector('#addProductForm').reset();
@@ -403,15 +433,30 @@ export default class EsiroAccount extends HTMLElement {
                 throw new Error('Only vendors can access their products');
             }
             
-            // Get the user's store
-            const store = await db.stores.where('ownerId').equals(user.id).first();
+            // Find the realm where the user is a vendor
+            const userMemberships = await db.members
+                .where('userId')
+                .equals(user.id)
+                .and(member => member.roles && member.roles.includes('vendor'))
+                .toArray();
             
-            if (!store) {
-                throw new Error('Store not found');
+            if (userMemberships.length === 0) {
+                productsDiv.innerHTML = '<p>You don\'t have any vendor stores yet.</p>';
+                return;
             }
             
-            // Get products for this store
-            const products = await db.products.where('vendorId').equals(store.id).toArray();
+            // Get products for all realms where the user is a vendor
+            const vendorRealms = userMemberships.map(m => m.realmId);
+            let products = [];
+            
+            for (const realm of vendorRealms) {
+                const realmProducts = await db.products
+                    .where('realmId')
+                    .equals(realm)
+                    .toArray();
+                
+                products = [...products, ...realmProducts];
+            }
             
             if (products.length === 0) {
                 productsDiv.innerHTML = '<p>You don\'t have any products yet.</p>';
@@ -425,7 +470,7 @@ export default class EsiroAccount extends HTMLElement {
                         <h4>${product.name}</h4>
                         <p>${product.description}</p>
                         <p>Price: $${product.price.toFixed(2)}</p>
-                        <p>Category: ${product.category}</p>
+                        <p>Category: ${product.category || (product.categories && product.categories[0]) || 'Uncategorized'}</p>
                         <p>Stock: ${product.stock}</p>
                         <div class="product-actions">
                             <button class="edit-product-btn">Edit</button>
@@ -438,12 +483,12 @@ export default class EsiroAccount extends HTMLElement {
                                 <input type="number" name="price" value="${product.price}" min="0" step="0.01" required>
                                 <input type="text" name="image" value="${product.image || ''}">
                                 <select name="category" required>
-                                    <option value="electronics" ${product.category === 'electronics' ? 'selected' : ''}>Electronics</option>
-                                    <option value="clothing" ${product.category === 'clothing' ? 'selected' : ''}>Clothing</option>
-                                    <option value="food" ${product.category === 'food' ? 'selected' : ''}>Food</option>
-                                    <option value="home" ${product.category === 'home' ? 'selected' : ''}>Home & Garden</option>
-                                    <option value="beauty" ${product.category === 'beauty' ? 'selected' : ''}>Beauty & Health</option>
-                                    <option value="other" ${product.category === 'other' ? 'selected' : ''}>Other</option>
+                                    <option value="electronics" ${(product.category === 'electronics' || (product.categories && product.categories.includes('electronics'))) ? 'selected' : ''}>Electronics</option>
+                                    <option value="clothing" ${(product.category === 'clothing' || (product.categories && product.categories.includes('clothing'))) ? 'selected' : ''}>Clothing</option>
+                                    <option value="food" ${(product.category === 'food' || (product.categories && product.categories.includes('food'))) ? 'selected' : ''}>Food</option>
+                                    <option value="home" ${(product.category === 'home' || (product.categories && product.categories.includes('home'))) ? 'selected' : ''}>Home & Garden</option>
+                                    <option value="beauty" ${(product.category === 'beauty' || (product.categories && product.categories.includes('beauty'))) ? 'selected' : ''}>Beauty & Health</option>
+                                    <option value="other" ${(product.category === 'other' || (product.categories && product.categories.includes('other'))) ? 'selected' : ''}>Other</option>
                                 </select>
                                 <input type="number" name="stock" value="${product.stock}" min="0" required>
                                 <button type="submit">Update</button>
@@ -497,6 +542,7 @@ export default class EsiroAccount extends HTMLElement {
                     price: parseFloat(form.price.value),
                     image: form.image.value.trim() || 'https://via.placeholder.com/150',
                     category: form.category.value,
+                    categories: [form.category.value],
                     stock: parseInt(form.stock.value),
                     updatedAt: new Date().toISOString()
                 };
@@ -530,10 +576,21 @@ export default class EsiroAccount extends HTMLElement {
                 throw new Error('Only vendors can update products');
             }
             
-            // Verify product ownership
+            // Verify product ownership or permissions
             const product = await db.products.get(productId);
-            if (!product || product.ownerId !== user.id) {
-                throw new Error('Product not found or you don\'t have permission to update it');
+            if (!product) {
+                throw new Error('Product not found');
+            }
+            
+            // Check if user is a vendor for this product's realm
+            const membership = await db.members
+                .where('[realmId+userId]')
+                .equals([product.realmId, user.id])
+                .and(member => member.roles && member.roles.includes('vendor'))
+                .first();
+                
+            if (!membership && product.owner !== user.id) {
+                throw new Error('You don\'t have permission to update this product');
             }
             
             // Update the product
@@ -559,24 +616,25 @@ export default class EsiroAccount extends HTMLElement {
                 throw new Error('Only vendors can delete products');
             }
             
-            // Verify product ownership
+            // Verify product ownership or permissions
             const product = await db.products.get(productId);
-            if (!product || product.ownerId !== user.id) {
-                throw new Error('Product not found or you don\'t have permission to delete it');
+            if (!product) {
+                throw new Error('Product not found');
             }
             
-            // Get the user's store to update product count
-            const store = await db.stores.where('ownerId').equals(user.id).first();
+            // Check if user is a vendor for this product's realm
+            const membership = await db.members
+                .where('[realmId+userId]')
+                .equals([product.realmId, user.id])
+                .and(member => member.roles && member.roles.includes('vendor'))
+                .first();
+                
+            if (!membership && product.owner !== user.id) {
+                throw new Error('You don\'t have permission to delete this product');
+            }
             
             // Delete the product
             await db.products.delete(productId);
-            
-            // Update store product count
-            if (store) {
-                store.productCount = Math.max((store.productCount || 0) - 1, 0);
-                store.updatedAt = new Date().toISOString();
-                await db.stores.put(store);
-            }
             
             messageDiv.innerHTML = '<p class="success-message">Product deleted successfully!</p>';
             this.loadVendorProducts(); // Refresh the products list

@@ -127,7 +127,7 @@ export default class EsiroProduct extends HTMLElement {
      */
     renderDefault() {
         const name = this.getAttribute('name') || this.#productData?.name || 'A product';
-        const price = this.getAttribute('price') || (this.#productData ? `$${this.#productData.price}` : '$0.00');
+        const price = this.getAttribute('price') || (this.#productData ? `KES ${this.#productData.price}` : 'KES 0.00');
         const image = this.getAttribute('image') || this.#productData?.image || 'https://via.placeholder.com/150';
         const id = this.#productId;
         const vendorId = this.getAttribute('vendor-id') || this.#productData?.vendorId || null;
@@ -228,7 +228,7 @@ export default class EsiroProduct extends HTMLElement {
      */
     renderExpanded() {
         const name = this.getAttribute('name') || this.#productData?.name || 'A product';
-        const price = this.getAttribute('price') || (this.#productData ? `$${this.#productData.price}` : '$0.00');
+        const price = this.getAttribute('price') || (this.#productData ? `KES ${this.#productData.price}` : 'KES 0.00');
         const image = this.getAttribute('image') || this.#productData?.image || 'https://via.placeholder.com/300';
         const id = this.#productId;
         const description = this.getAttribute('description') || this.#productData?.description || '';

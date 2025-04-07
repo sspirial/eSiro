@@ -12,6 +12,7 @@ import {
     EsiroLogin,
     EsiroVendorDashboard
 } from './components/index.js';
+import { AuthService } from './services/auth.js';
 
 export default class EsiroNetwork extends HTMLElement {
   constructor() {
@@ -21,6 +22,10 @@ export default class EsiroNetwork extends HTMLElement {
   async connectedCallback() {
     try {
       await initializeDatabase(); // Initialize database first
+      
+      // Initialize user session
+      await AuthService.initDemoUser();
+      
       this.render();
       
       // Set initial active section

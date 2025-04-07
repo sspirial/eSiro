@@ -13,15 +13,22 @@ export class RouterService {
 
     static async handleRoute() {
         const path = window.location.pathname;
-        const user = await AuthService.getUser();
+        const user = AuthService.getUser();
         const main = document.querySelector('main');
         const network = document.querySelector('esiro-network');
 
         // Handle role-based routing
         if (user) {
-            if (user.role === 'vendor' && path === '/eSiro/') {
-                this.navigate('/eSiro/vendor');
+            if (user.role === 'vendor' && path === '/eSiro/account') {
+                // When vendors visit the account page, they should see the vendor dashboard
+                if (main) {
+                    main.innerHTML = '<esiro-vendor-dashboard></esiro-vendor-dashboard>';
+                }
                 return;
+            } else if (user.role === 'vendor' && path === '/eSiro/') {
+                // Optionally redirect vendor to their dashboard on home page
+                // this.navigate('/eSiro/vendor');
+                // return;
             }
         }
 

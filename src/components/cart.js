@@ -286,7 +286,7 @@ export default class EsiroCart extends HTMLElement {
                 <img src="${item.image || 'https://via.placeholder.com/150'}" alt="${item.name}" class="item-image">
                 <div class="item-details">
                     <h3>${item.name}</h3>
-                    <p class="item-price">$${item.price}</p>
+                    <p class="item-price">KES ${item.price}</p>
                 </div>
                 <div class="item-quantity">
                     <button class="quantity-btn" data-action="decrease" aria-label="Decrease quantity">-</button>
@@ -305,22 +305,22 @@ export default class EsiroCart extends HTMLElement {
      */
     renderCartSummary() {
         const subtotal = this.calculateSubtotal();
-        const shipping = 5.00; // Fixed shipping cost
+        const shipping = 500.00; // Fixed shipping cost in KES
         const total = subtotal + shipping;
 
         return `
             <div class="cart-summary">
                 <div class="summary-row">
                     <span>Subtotal:</span>
-                    <span>$${subtotal.toFixed(2)}</span>
+                    <span>KES ${subtotal.toFixed(2)}</span>
                 </div>
                 <div class="summary-row">
                     <span>Shipping:</span>
-                    <span>$${shipping.toFixed(2)}</span>
+                    <span>KES ${shipping.toFixed(2)}</span>
                 </div>
                 <div class="summary-row total">
                     <span>Total:</span>
-                    <span>$${total.toFixed(2)}</span>
+                    <span>KES ${total.toFixed(2)}</span>
                 </div>
             </div>
         `;
@@ -344,24 +344,15 @@ export default class EsiroCart extends HTMLElement {
     renderCheckoutForm() {
         return `
             <form class="checkout-form">
-                <h3>Shipping Information</h3>
+                <h3>Proceed to Pay</h3>
                 <div class="form-row">
-                    <input type="text" placeholder="Full Name" required aria-label="Full Name">
+                    <input type="tel" placeholder="Phone Number (e.g., 0712345678)" 
+                           pattern="^(?:254|\+254|0)?(7[0-9]{8})$"
+                           title="Please enter a valid Kenyan phone number (e.g., 0712345678 or +254712345678)"
+                           required aria-label="Phone Number">
+                    <small class="phone-hint">Format: 07XXXXXXXX or +254XXXXXXXXX</small>
                 </div>
-                <div class="form-row">
-                    <input type="text" placeholder="Address" required aria-label="Address">
-                </div>
-                <div class="form-row double">
-                    <input type="text" placeholder="City" required aria-label="City">
-                    <input type="text" placeholder="Postal Code" required aria-label="Postal Code">
-                </div>
-                <div class="form-row">
-                    <input type="email" placeholder="Email Address" required aria-label="Email Address">
-                </div>
-                <div class="form-row">
-                    <input type="tel" placeholder="Phone Number" required aria-label="Phone Number">
-                </div>
-                <button type="submit" class="checkout-button">Proceed to Checkout</button>
+                <button type="submit" class="checkout-button">Pay</button>
             </form>
         `;
     }
@@ -388,13 +379,21 @@ export default class EsiroCart extends HTMLElement {
         // Quantity buttons
         const quantityButtons = this.querySelectorAll('.quantity-btn');
         quantityButtons.forEach(button => {
-            button.addEventListener('click', this.handleQuantityChange.bind(this));
+            button.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent default button behavior
+                e.stopPropagation(); // Stop event bubbling
+                this.handleQuantityChange(e);
+            });
         });
 
         // Remove buttons
         const removeButtons = this.querySelectorAll('.remove-btn');
         removeButtons.forEach(button => {
-            button.addEventListener('click', this.handleRemoveItem.bind(this));
+            button.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent default button behavior
+                e.stopPropagation(); // Stop event bubbling
+                this.handleRemoveItem(e);
+            });
         });
     }
 
@@ -405,6 +404,18 @@ export default class EsiroCart extends HTMLElement {
      */
     handleCheckout(event) {
         event.preventDefault();
+        
+        // Validate Kenyan phone number
+        const phoneInput = event.target.querySelector('input[type="tel"]');
+        const phoneNumber = phoneInput.value.trim();
+        const kenyanPhoneRegex = /^(?:254|\+254|0)?(7[0-9]{8})$/;
+        
+        if (!kenyanPhoneRegex.test(phoneNumber)) {
+            this.showNotification('Please enter a valid Kenyan phone number', 'error');
+            phoneInput.focus();
+            return;
+        }
+        
         this.createOrder()
             .then(() => {
                 this.showNotification('Thank you for your order!');
@@ -425,7 +436,7 @@ export default class EsiroCart extends HTMLElement {
         try {
             const userId = this.getCurrentUserId();
             const subtotal = this.calculateSubtotal();
-            const shipping = 5.00;
+            const shipping = 500.00;
             const total = subtotal + shipping;
             
             // Create order

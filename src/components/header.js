@@ -344,10 +344,7 @@ export default class EsiroHeader extends HTMLElement {
      */
     handleAccountClick(event) {
         event.preventDefault();
-        const mainContent = document.querySelector('main');
-        if (mainContent) {
-            mainContent.innerHTML = '<esiro-account></esiro-account>';
-        }
+        RouterService.navigate('/eSiro/account');
     }
     
     /**

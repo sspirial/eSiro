@@ -10,7 +10,7 @@ const db = new Dexie('esiro', {
 });
 
 // Schema definition - @ prefix enables cloud sync
-db.version(4).stores({
+db.version(5).stores({
     // Application tables
     products: '@id, name, price, stock, vendorId, image, description, *categories, realmId, owner',
     stores: '@id, name, image, description, realmId, owner',

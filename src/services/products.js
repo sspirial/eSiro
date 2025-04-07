@@ -186,4 +186,156 @@ export class ProductService {
             return [];
         }
     }
+    
+    /**
+     * Add a product to the user's cart
+     * @param {string} productId - Product ID to add to cart
+     * @param {number} quantity - Quantity to add, defaults to 1
+     * @returns {Promise<boolean>} Success status
+     */
+    static async addToCart(productId, quantity = 1) {
+        try {
+            await db.open(); // Ensure database is open
+            const user = AuthService.getUser();
+            
+            if (!user) {
+                throw new Error('You must be logged in to add items to cart');
+            }
+            
+            // Verify product exists
+            const product = await db.products.get(productId);
+            if (!product) {
+                throw new Error('Product not found');
+            }
+            
+            // Check if product is already in cart
+            const existingCartItem = await db.cart
+                .where('productId')
+                .equals(productId)
+                .and(item => item.userId === user.id)
+                .first();
+                
+            if (existingCartItem) {
+                // Update quantity if already in cart
+                await db.cart.update(existingCartItem.id, {
+                    quantity: existingCartItem.quantity + quantity
+                });
+            } else {
+                // Add new cart item
+                await db.cart.add({
+                    id: crypto.randomUUID(),
+                    productId,
+                    quantity,
+                    userId: user.id,
+                    owner: user.id,
+                    addedAt: new Date().toISOString()
+                });
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('Add to cart error:', error);
+            return false;
+        }
+    }
+    
+    /**
+     * Get the current user's cart items
+     * @returns {Promise<Array>} Cart items with product details
+     */
+    static async getCartItems() {
+        try {
+            await db.open();
+            const user = AuthService.getUser();
+            
+            if (!user) {
+                throw new Error('You must be logged in to view cart');
+            }
+            
+            // Get cart items for current user
+            const cartItems = await db.cart
+                .where('userId')
+                .equals(user.id)
+                .toArray();
+                
+            // Get product details for each cart item
+            const itemsWithDetails = await Promise.all(
+                cartItems.map(async (item) => {
+                    const product = await db.products.get(item.productId);
+                    return {
+                        ...item,
+                        product
+                    };
+                })
+            );
+            
+            return itemsWithDetails;
+        } catch (error) {
+            console.error('Get cart items error:', error);
+            return [];
+        }
+    }
+    
+    /**
+     * Remove an item from the cart
+     * @param {string} cartItemId - Cart item ID to remove
+     * @returns {Promise<boolean>} Success status
+     */
+    static async removeFromCart(cartItemId) {
+        try {
+            await db.open();
+            const user = AuthService.getUser();
+            
+            if (!user) {
+                throw new Error('You must be logged in to modify cart');
+            }
+            
+            // Verify cart item belongs to user
+            const cartItem = await db.cart.get(cartItemId);
+            if (!cartItem || cartItem.userId !== user.id) {
+                throw new Error('Cart item not found or does not belong to current user');
+            }
+            
+            await db.cart.delete(cartItemId);
+            return true;
+        } catch (error) {
+            console.error('Remove from cart error:', error);
+            return false;
+        }
+    }
+    
+    /**
+     * Update cart item quantity
+     * @param {string} cartItemId - Cart item ID
+     * @param {number} quantity - New quantity
+     * @returns {Promise<boolean>} Success status
+     */
+    static async updateCartItemQuantity(cartItemId, quantity) {
+        try {
+            await db.open();
+            const user = AuthService.getUser();
+            
+            if (!user) {
+                throw new Error('You must be logged in to modify cart');
+            }
+            
+            // Verify cart item belongs to user
+            const cartItem = await db.cart.get(cartItemId);
+            if (!cartItem || cartItem.userId !== user.id) {
+                throw new Error('Cart item not found or does not belong to current user');
+            }
+            
+            // Remove item if quantity is 0
+            if (quantity <= 0) {
+                return this.removeFromCart(cartItemId);
+            }
+            
+            // Update quantity
+            await db.cart.update(cartItemId, { quantity });
+            return true;
+        } catch (error) {
+            console.error('Update cart item quantity error:', error);
+            return false;
+        }
+    }
 }
