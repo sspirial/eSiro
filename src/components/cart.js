@@ -1,5 +1,6 @@
 import { db } from '../db.js';
 import { AuthService } from '../services/auth.js';
+import { RouterService } from '../services/router.js';
 
 /**
  * Cart component for displaying and managing shopping cart
@@ -374,10 +375,7 @@ export default class EsiroCart extends HTMLElement {
         const shopButton = this.querySelector('.shop-button');
         if (shopButton) {
             shopButton.addEventListener('click', () => {
-                const network = document.querySelector('esiro-network');
-                if (network && typeof network.showSection === 'function') {
-                    network.showSection('products');
-                }
+                RouterService.navigate('/eSiro/products');
             });
         }
 

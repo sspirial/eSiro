@@ -1,84 +1,50 @@
 import { AuthService } from '../services/auth.js';
 import { ProductService } from '../services/products.js';
+import { RouterService } from '../services/router.js';
 
-export class AccountPage extends HTMLElement {
+export default class EsiroAccount extends HTMLElement {
     connectedCallback() {
-        const user = AuthService.getUser();
+        try {
+            const user = AuthService.getUser();
+            if (!user) {
+                this.renderError('User not logged in. Please log in to access your account.');
+                return;
+            }
+
+            this.innerHTML = `
+                <div class="account-page">
+                    <h1>My Account</h1>
+                    ${user ? this.renderUserAccount(user) : this.renderLogin()}
+                    <style>
+                        .account-page {
+                            padding: 20px;
+                            max-width: 800px;
+                            margin: 0 auto;
+                        }
+                        .error-message {
+                            color: red;
+                            font-weight: bold;
+                        }
+                    </style>
+                </div>`;
+
+            if (user.role === 'vendor') {
+                this.loadVendorProducts();
+            }
+
+            this.setupEventListeners();
+        } catch (error) {
+            console.error('Error loading account page:', error);
+            this.renderError('An error occurred while loading your account. Please try again later.');
+        }
+    }
+
+    renderError(message) {
         this.innerHTML = `
             <div class="account-page">
                 <h1>My Account</h1>
-                ${user ? this.renderUserAccount(user) : this.renderLogin()}
-                <style>
-                    .account-page {
-                        padding: 20px;
-                        max-width: 800px;
-                        margin: 0 auto;
-                    }
-                    form {
-                        display: flex;
-                        flex-direction: column;
-                        gap: 15px;
-                    }
-                    input, textarea, select {
-                        padding: 8px;
-                        border: 1px solid #ddd;
-                        border-radius: 4px;
-                    }
-                    button {
-                        padding: 10px;
-                        background: #4299e1;
-                        color: white;
-                        border: none;
-                        border-radius: 4px;
-                        cursor: pointer;
-                    }
-                    .account-details {
-                        padding: 20px;
-                        border: 1px solid #eee;
-                        border-radius: 8px;
-                        margin-bottom: 20px;
-                    }
-                    .vendor-section {
-                        margin-top: 30px;
-                        padding: 20px;
-                        border: 1px solid #eee;
-                        border-radius: 8px;
-                    }
-                    .product-form {
-                        margin-top: 20px;
-                        padding: 20px;
-                        background: #f9f9f9;
-                        border-radius: 8px;
-                    }
-                    .products-list {
-                        margin-top: 20px;
-                    }
-                    .product-item {
-                        padding: 10px;
-                        border: 1px solid #eee;
-                        border-radius: 4px;
-                        margin-bottom: 10px;
-                    }
-                    .hidden {
-                        display: none;
-                    }
-                    .success-message {
-                        color: green;
-                        margin: 10px 0;
-                    }
-                    .error-message {
-                        color: red;
-                        margin: 10px 0;
-                    }
-                </style>
+                <p class="error-message">${message}</p>
             </div>`;
-        
-        this.setupEventListeners();
-        
-        // If user is logged in and is a vendor, load their products
-        if (user && AuthService.isVendor()) {
-            this.loadVendorProducts();
-        }
     }
 
     renderUserAccount(user) {
@@ -90,54 +56,39 @@ export class AccountPage extends HTMLElement {
                 <p>Role: ${user.role || 'buyer'}</p>
                 <button id="logout">Logout</button>
             </div>
-            
-            ${this.renderVendorSection(user)}`;
+            ${user.role === 'vendor' ? this.renderVendorSection(user) : ''}`;
     }
 
     renderVendorSection(user) {
-        if (user.role === 'vendor') {
-            return `
-                <div class="vendor-section">
-                    <h2>Vendor Dashboard</h2>
-                    <div id="vendor-message"></div>
-                    
-                    <h3>Add New Product</h3>
-                    <form id="addProductForm" class="product-form">
-                        <input type="text" name="name" placeholder="Product Name" required>
-                        <textarea name="description" placeholder="Product Description" required></textarea>
-                        <input type="number" name="price" placeholder="Price" min="0" step="0.01" required>
-                        <input type="text" name="imageUrl" placeholder="Image URL (optional)">
-                        <select name="category" required>
-                            <option value="">Select Category</option>
-                            <option value="electronics">Electronics</option>
-                            <option value="clothing">Clothing</option>
-                            <option value="food">Food</option>
-                            <option value="home">Home & Garden</option>
-                            <option value="beauty">Beauty & Health</option>
-                            <option value="other">Other</option>
-                        </select>
-                        <input type="number" name="stock" placeholder="Stock Quantity" min="0" required>
-                        <button type="submit">Add Product</button>
-                    </form>
-                    
-                    <h3>My Products</h3>
-                    <div id="vendorProducts" class="products-list">
-                        <p>Loading products...</p>
-                    </div>
-                </div>`;
-        } else {
-            return `
-                <div class="vendor-section">
-                    <h2>Become a Vendor</h2>
-                    <p>Create your own store and start selling products!</p>
-                    <div id="vendor-message"></div>
-                    
-                    <form id="createStoreForm">
-                        <input type="text" name="storeName" placeholder="Store Name" required>
-                        <button type="submit">Create Store</button>
-                    </form>
-                </div>`;
-        }
+        return `
+            <div class="vendor-section">
+                <h2>Vendor Dashboard</h2>
+                <div id="vendor-message"></div>
+                
+                <h3>Add New Product</h3>
+                <form id="addProductForm" class="product-form">
+                    <input type="text" name="name" placeholder="Product Name" required>
+                    <textarea name="description" placeholder="Product Description" required></textarea>
+                    <input type="number" name="price" placeholder="Price" min="0" step="0.01" required>
+                    <input type="text" name="imageUrl" placeholder="Image URL (optional)">
+                    <select name="category" required>
+                        <option value="">Select Category</option>
+                        <option value="electronics">Electronics</option>
+                        <option value="clothing">Clothing</option>
+                        <option value="food">Food</option>
+                        <option value="home">Home & Garden</option>
+                        <option value="beauty">Beauty & Health</option>
+                        <option value="other">Other</option>
+                    </select>
+                    <input type="number" name="stock" placeholder="Stock Quantity" min="0" required>
+                    <button type="submit">Add Product</button>
+                </form>
+                
+                <h3>My Products</h3>
+                <div id="vendorProducts" class="products-list">
+                    <p>Loading products...</p>
+                </div>
+            </div>`;
     }
 
     renderLogin() {
@@ -154,7 +105,6 @@ export class AccountPage extends HTMLElement {
     setupEventListeners() {
         const loginForm = this.querySelector('#loginForm');
         const logoutBtn = this.querySelector('#logout');
-        const createStoreForm = this.querySelector('#createStoreForm');
         const addProductForm = this.querySelector('#addProductForm');
 
         if (loginForm) {
@@ -165,19 +115,9 @@ export class AccountPage extends HTMLElement {
         }
 
         if (logoutBtn) {
-            logoutBtn.addEventListener('click', () => {
-                localStorage.removeItem('user');
-                window.location.reload();
-            });
-        }
-
-        if (createStoreForm) {
-            createStoreForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const storeName = createStoreForm.storeName.value.trim();
-                if (storeName) {
-                    this.createStore(storeName);
-                }
+            logoutBtn.addEventListener('click', async () => {
+                await AuthService.logout();
+                RouterService.navigate('/eSiro/');
             });
         }
 
@@ -194,28 +134,8 @@ export class AccountPage extends HTMLElement {
                     createdAt: new Date().toISOString()
                 };
                 
-                this.addProduct(productData);
+                await this.addProduct(productData);
             });
-        }
-    }
-
-    async createStore(storeName) {
-        const messageDiv = this.querySelector('#vendor-message');
-        messageDiv.innerHTML = '<p>Creating store...</p>';
-        
-        try {
-            const result = await AuthService.becomeVendor(storeName);
-            
-            if (result.success) {
-                messageDiv.innerHTML = '<p class="success-message">Store created successfully! Refreshing...</p>';
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
-            } else {
-                messageDiv.innerHTML = `<p class="error-message">Error: ${result.error}</p>`;
-            }
-        } catch (error) {
-            messageDiv.innerHTML = `<p class="error-message">Error: ${error.message}</p>`;
         }
     }
 
@@ -286,8 +206,6 @@ export class AccountPage extends HTMLElement {
             });
             
             productsDiv.innerHTML = html;
-            
-            // Add event listeners for edit and delete buttons
             this.setupProductEventListeners();
             
         } catch (error) {
@@ -332,7 +250,7 @@ export class AccountPage extends HTMLElement {
                     stock: parseInt(form.stock.value)
                 };
                 
-                this.updateProduct(productId, productData);
+                await this.updateProduct(productId, productData);
             });
         });
         
@@ -343,7 +261,7 @@ export class AccountPage extends HTMLElement {
                 if (confirm('Are you sure you want to delete this product?')) {
                     const productItem = e.target.closest('.product-item');
                     const productId = productItem.dataset.id;
-                    this.deleteProduct(productId);
+                    await this.deleteProduct(productId);
                 }
             });
         });
@@ -385,5 +303,3 @@ export class AccountPage extends HTMLElement {
         }
     }
 }
-
-customElements.define('esiro-account', AccountPage);

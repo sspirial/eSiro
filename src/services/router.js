@@ -1,3 +1,5 @@
+import { AuthService } from './auth.js';
+
 export class RouterService {
     static init() {
         window.addEventListener('popstate', () => this.handleRoute());
@@ -9,22 +11,38 @@ export class RouterService {
         this.handleRoute();
     }
 
-    static handleRoute() {
+    static async handleRoute() {
         const path = window.location.pathname;
+        const user = await AuthService.getUser();
         const main = document.querySelector('main');
-        
-        switch(path) {
-            case '/':
-                main.innerHTML = '<esiro-home></esiro-home>';
+        const network = document.querySelector('esiro-network');
+
+        // Handle role-based routing
+        if (user) {
+            if (user.role === 'vendor' && path === '/eSiro/') {
+                this.navigate('/eSiro/vendor');
+                return;
+            }
+        }
+
+        // Handle section-based routing
+        switch (path) {
+            case '/eSiro/account':
+                if (main) {
+                    main.innerHTML = '<esiro-account></esiro-account>';
+                }
                 break;
-            case '/personal-home':
-                main.innerHTML = '<esiro-personal-home></esiro-personal-home>';
-                break;
-            case '/account':
-                main.innerHTML = '<esiro-account></esiro-account>';
+            case '/eSiro/vendor':
+                if (main) {
+                    main.innerHTML = '<esiro-vendor-dashboard></esiro-vendor-dashboard>';
+                }
                 break;
             default:
-                main.innerHTML = '<esiro-home></esiro-home>';
+                // For other routes, use the network component's showSection
+                if (network) {
+                    const section = path.split('/').pop() || 'stores';
+                    network.showSection(section);
+                }
         }
     }
 }

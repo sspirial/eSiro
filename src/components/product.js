@@ -1,4 +1,5 @@
 import { ProductService } from '../services/products.js';
+import { RouterService } from '../services/router.js';
 import { db } from '../db.js';
 
 /**
@@ -436,15 +437,8 @@ export default class EsiroProduct extends HTMLElement {
             const success = await ProductService.addToCart(productId);
             if (success) {
                 // Navigate to checkout
-                const network = document.querySelector('esiro-network');
-                if (network && typeof network.showSection === 'function') {
-                    network.showSection('cart');
-                    this.showNotification('Proceeding to checkout!');
-                } else {
-                    // Fallback if navigation component isn't available
-                    window.location.href = '#/cart';
-                    this.showNotification('Proceeding to checkout!');
-                }
+                RouterService.navigate('/eSiro/cart');
+                this.showNotification('Proceeding to checkout!');
             } else {
                 this.showNotification('Failed to process purchase', 'error');
             }
@@ -498,16 +492,11 @@ export default class EsiroProduct extends HTMLElement {
      * @private
      */
     navigateToStore(storeId) {
+        RouterService.navigate('/eSiro/stores');
         setTimeout(() => {
             const storeComponents = document.querySelectorAll(`esiro-store[store-id="${storeId}"]`);
-            if (storeComponents.length > 0) {
-                const network = document.querySelector('esiro-network');
-                if (network && typeof network.showSection === 'function') {
-                    network.showSection('stores');
-                }
-                if (typeof storeComponents[0].expandStore === 'function') {
-                    storeComponents[0].expandStore();
-                }
+            if (storeComponents.length > 0 && typeof storeComponents[0].expandStore === 'function') {
+                storeComponents[0].expandStore();
             }
         }, 100);
     }

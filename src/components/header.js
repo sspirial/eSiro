@@ -1,5 +1,6 @@
 import { AuthService } from '../services/auth.js';
 import { ThemeService } from '../services/theme.js';
+import { RouterService } from '../services/router.js';
 
 /**
  * Header component for application navigation and global actions
@@ -26,18 +27,18 @@ export default class EsiroHeader extends HTMLElement {
                 <span class="logo-text">eSiro</span>
             </a>
             <div class="search-container">
-                <span class="material-icons search-icon" aria-hidden="true">search</span>
+                <span class="fas fa-search search-icon" aria-hidden="true"></span>
                 <input type="text" id="search-input" placeholder="Search..." aria-label="Search products and stores">
             </div>
             <div class="header-actions">
                 <button id="theme-toggle" aria-label="Toggle dark/light theme">
-                    <span class="material-icons">dark_mode</span>
+                    <span class="fas fa-moon"></span>
                 </button>
                 <button id="cart-button" aria-label="Shopping cart">
-                    <span class="material-icons">shopping_cart</span>
+                    <span class="fas fa-shopping-cart"></span>
                 </button>
                 <a href="#" id="account" aria-label="Account">
-                    <span class="material-icons">person</span>
+                    <span class="fas fa-user"></span>
                 </a>
                 <div id="login-status"></div>
             </div>
@@ -45,17 +46,17 @@ export default class EsiroHeader extends HTMLElement {
         
         <!-- Floating action button for search on mobile -->
         <button class="search-fab" aria-label="Search">
-            <span class="material-icons">search</span>
+            <span class="fas fa-search"></span>
         </button>
         
         <!-- Modal search for mobile -->
         <div class="search-modal" aria-hidden="true">
             <div class="search-modal-content">
                 <div class="search-modal-header">
-                    <span class="material-icons search-icon" aria-hidden="true">search</span>
+                    <span class="fas fa-search search-icon" aria-hidden="true"></span>
                     <input type="text" id="modal-search-input" placeholder="Search..." aria-label="Search products and stores">
                     <button class="close-search-modal" aria-label="Close search">
-                        <span class="material-icons">close</span>
+                        <span class="fas fa-times"></span>
                     </button>
                 </div>
             </div>
@@ -144,7 +145,7 @@ export default class EsiroHeader extends HTMLElement {
                 align-items: center;
                 justify-content: center;
             }
-            .material-icons {
+            .fas {
                 font-size: 24px;
             }
             #theme-toggle:hover, #account:hover, #cart-button:hover {
@@ -254,6 +255,12 @@ export default class EsiroHeader extends HTMLElement {
                     z-index: 99;
                 }
             }
+
+            // Ensure header icons are visible in both light and dark themes
+            .header-actions .fas {
+                color: var(--text-primary); /* Use theme-based text color */
+                transition: color 0.3s ease; /* Smooth transition for theme changes */
+            }
         </style>`;
     }
 
@@ -306,11 +313,7 @@ export default class EsiroHeader extends HTMLElement {
      */
     handleLogoClick(event) {
         event.preventDefault();
-        if (AuthService.isLoggedIn()) {
-            window.location.href = '/personal-home';
-        } else {
-            window.location.href = '/';
-        }
+        RouterService.navigate('/eSiro/');
     }
     
     /**
@@ -330,11 +333,14 @@ export default class EsiroHeader extends HTMLElement {
         const themeToggle = this.querySelector('#theme-toggle');
         if (themeToggle) {
             const isDarkTheme = ThemeService.getCurrentTheme() === 'dark';
-            const iconElement = themeToggle.querySelector('.material-icons');
+            const iconElement = themeToggle.querySelector('.fas');
             if (iconElement) {
-                iconElement.textContent = isDarkTheme ? 'light_mode' : 'dark_mode';
+                iconElement.className = isDarkTheme ? 'fas fa-sun' : 'fas fa-moon';
                 themeToggle.setAttribute('aria-label', 
                     isDarkTheme ? 'Switch to light theme' : 'Switch to dark theme');
+                
+                // Update icon color for visibility
+                iconElement.style.color = isDarkTheme ? '#FFD700' : '#212529';
             }
         }
     }
@@ -359,7 +365,10 @@ export default class EsiroHeader extends HTMLElement {
      */
     handleAccountClick(event) {
         event.preventDefault();
-        window.location.href = '/eSiro/account/';
+        const mainContent = document.querySelector('main');
+        if (mainContent) {
+            mainContent.innerHTML = '<esiro-account></esiro-account>';
+        }
     }
     
     /**
@@ -445,7 +454,7 @@ export default class EsiroHeader extends HTMLElement {
             `;
             
             loginStatus.querySelector('.login-button')?.addEventListener('click', () => {
-                window.location.href = '/eSiro/account/';
+                RouterService.navigate('/eSiro/account');
             });
         }
     }
@@ -458,9 +467,7 @@ export default class EsiroHeader extends HTMLElement {
         try {
             await AuthService.logout();
             this.updateLoginState();
-            
-            // Redirect to home
-            window.location.href = '/';
+            RouterService.navigate('/eSiro/');
         } catch (error) {
             console.error('Logout error:', error);
         }

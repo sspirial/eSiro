@@ -10,13 +10,19 @@ const db = new Dexie('esiro', {
 });
 
 // Schema definition - @ prefix enables cloud sync
-db.version(2).stores({
-    products: '@id, name, price, stock, vendorId, image, description, *categories, realmId, ownerId',
-    stores: '@id, name, image, description, realmId, ownerId',
-    cart: '@id, productId, quantity, userId, ownerId',
-    orders: '@id, userId, total, status, date, realmId, ownerId',
-    orderItems: '@id, orderId, productId, quantity, price, realmId, ownerId',
-    users: '@id, email, name, role'
+db.version(4).stores({
+    // Application tables
+    products: '@id, name, price, stock, vendorId, image, description, *categories, realmId, owner',
+    stores: '@id, name, image, description, realmId, owner',
+    cart: '@id, productId, quantity, userId, owner',
+    orders: '@id, userId, total, status, date, realmId, owner',
+    orderItems: '@id, orderId, productId, quantity, price, realmId, owner',
+    users: '@id, email, name, role',
+
+    // Access Control tables
+    realms: '@realmId, type, name, owner, represents',
+    members: '@id, [realmId+email], realmId, userId, email, name, invite, invited, accepted, rejected, roles, permissions',
+    roles: '[realmId+name], realmId, name, permissions'
 });
 
 /**
@@ -28,6 +34,7 @@ async function initDB() {
         if (import.meta.env.VITE_DATABASE_URL) {
             await db.cloud.configure({
                 databaseUrl: import.meta.env.VITE_DATABASE_URL,
+                requireAuth: true, // Require authentication for database access
                 accessControl: {
                     defaultAccess: 'authenticated',
                     
@@ -46,12 +53,15 @@ async function initDB() {
                                     users: {
                                         read: 'own',
                                         write: 'own'
+                                    },
+                                    members: {
+                                        read: 'own'
                                     }
                                 }
                             }
                         },
                         
-                        // Shop realm - where vendors control their products
+                        // Shop realm - where vendors control their products and staff
                         shop: {
                             defaultRole: 'vendor',
                             roles: {
@@ -60,13 +70,36 @@ async function initDB() {
                                     stores: 'crud',
                                     orders: 'r',
                                     orderItems: 'r',
-                                    users: 'r'
+                                    users: 'r',
+                                    members: 'crud',
+                                    roles: 'crud'
+                                },
+                                staff: {
+                                    products: 'crud',
+                                    orders: 'r',
+                                    orderItems: 'r'
                                 }
                             },
-                            // Public access for shop products
                             publicAccess: {
                                 products: 'r',
                                 stores: 'r'
+                            }
+                        },
+                        
+                        // Admin realm - full system access
+                        admin: {
+                            defaultRole: 'admin',
+                            roles: {
+                                admin: {
+                                    products: 'crud',
+                                    stores: 'crud',
+                                    orders: 'crud',
+                                    orderItems: 'crud',
+                                    users: 'crud',
+                                    members: 'crud',
+                                    roles: 'crud',
+                                    realms: 'crud'
+                                }
                             }
                         }
                     }
@@ -75,6 +108,17 @@ async function initDB() {
         }
         
         await db.open();
+        
+        // Initialize default roles if they don't exist
+        const roles = await db.roles.count();
+        if (roles === 0) {
+            await db.roles.bulkAdd([
+                { realmId: 'user', name: 'buyer', permissions: ['read:products', 'crud:cart', 'crud:orders'] },
+                { realmId: 'shop', name: 'vendor', permissions: ['crud:products', 'crud:store', 'read:orders'] },
+                { realmId: 'shop', name: 'staff', permissions: ['crud:products', 'read:orders'] },
+                { realmId: 'admin', name: 'admin', permissions: ['crud:*'] }
+            ]);
+        }
     } catch (error) {
         console.error('Failed to initialize database:', error);
         throw error;
@@ -83,40 +127,42 @@ async function initDB() {
 
 /**
  * Create a shop realm for a vendor
- * @param {string} userId - The ID of the user
- * @param {string} shopName - Name for the shop
- * @returns {Promise<Object>} - Result with realmId and storeId
+ * @param {string} userId - User ID
+ * @param {string} shopName - Name of the shop
+ * @returns {Promise<Object>} Created store data
  */
 export async function createVendorShop(userId, shopName) {
     try {
-        const userRealms = await db.cloud.getRealmsForUser();
-        const existingShopRealm = userRealms.find(realm => realm.type === 'shop');
-        
-        if (existingShopRealm) {
-            console.log('User already has a shop realm:', existingShopRealm.name);
-            return existingShopRealm;
-        }
-        
-        const realmInfo = await db.cloud.createRealm({
-            type: 'shop',
-            name: shopName
+        // Create a new shop realm with vendor role
+        const shopRealm = await db.cloud.sync.createRealm('shop', {
+            name: shopName,
+            roles: {
+                [userId]: 'vendor'
+            }
         });
         
-        // Create store for this vendor
+        // Create the store record
         const storeId = crypto.randomUUID();
         await db.stores.add({
             id: storeId,
             name: shopName,
-            image: "https://via.placeholder.com/150",
+            image: 'https://via.placeholder.com/150',
             description: `Welcome to ${shopName}`,
             ownerId: userId,
-            realmId: realmInfo.name
+            realmId: shopRealm.realmId
+        });
+
+        // Update user role and assign to shop realm
+        await db.users.where('id').equals(userId).modify(user => {
+            user.role = 'vendor';
+            user.realmId = shopRealm.realmId;
         });
         
-        // Update user role
-        await db.users.update(userId, { role: 'vendor' });
-        
-        return { realmId: realmInfo.name, storeId };
+        return {
+            success: true,
+            storeId,
+            realmId: shopRealm.realmId
+        };
     } catch (error) {
         console.error('Error creating vendor shop:', error);
         throw error;
@@ -295,5 +341,82 @@ export async function seedData() {
     } catch (error) {
         console.error('Error seeding data:', error);
         throw error;
+    }
+}
+
+/**
+ * Invite a user to join a realm with specific roles
+ * @param {string} realmId - The realm to invite to
+ * @param {string} email - Email of the user to invite
+ * @param {string[]} roles - Roles to assign
+ * @returns {Promise<boolean>} Success status
+ */
+export async function inviteUserToRealm(realmId, email, roles) {
+    try {
+        const realm = await db.realms.get(realmId);
+        if (!realm) throw new Error('Realm not found');
+
+        const inviteId = crypto.randomUUID();
+        await db.members.add({
+            id: inviteId,
+            realmId,
+            email,
+            roles,
+            invite: true,
+            invited: new Date().toISOString(),
+            accepted: null,
+            rejected: null
+        });
+
+        return true;
+    } catch (error) {
+        console.error('Error inviting user:', error);
+        return false;
+    }
+}
+
+/**
+ * Accept a realm invitation
+ * @param {string} inviteId - The invitation ID
+ * @returns {Promise<boolean>} Success status
+ */
+export async function acceptRealmInvite(inviteId) {
+    try {
+        const invite = await db.members.get(inviteId);
+        if (!invite) throw new Error('Invitation not found');
+
+        await db.members.update(inviteId, {
+            accepted: new Date().toISOString(),
+            rejected: null
+        });
+
+        return true;
+    } catch (error) {
+        console.error('Error accepting invitation:', error);
+        return false;
+    }
+}
+
+/**
+ * Update member roles in a realm
+ * @param {string} realmId - The realm ID
+ * @param {string} userId - The user ID
+ * @param {string[]} roles - New roles to assign
+ * @returns {Promise<boolean>} Success status
+ */
+export async function updateMemberRoles(realmId, userId, roles) {
+    try {
+        const member = await db.members
+            .where('[realmId+userId]')
+            .equals([realmId, userId])
+            .first();
+
+        if (!member) throw new Error('Member not found in realm');
+
+        await db.members.update(member.id, { roles });
+        return true;
+    } catch (error) {
+        console.error('Error updating member roles:', error);
+        return false;
     }
 }

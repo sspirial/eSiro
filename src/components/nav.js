@@ -28,19 +28,19 @@ export default class EsiroNav extends HTMLElement {
         this.innerHTML = `
         <nav aria-label="Main navigation">
             <button data-section="stores" aria-label="Stores section">
-                <span class="nav-icon material-icons">storefront</span>
+                <span class="nav-icon fas fa-store"></span>
                 <span class="nav-text">Stores</span>
             </button>
             <button data-section="products" aria-label="Products section">
-                <span class="nav-icon material-icons">inventory_2</span>
+                <span class="nav-icon fas fa-box"></span>
                 <span class="nav-text">Products</span>
             </button>
             <button data-section="data" aria-label="Data section">
-                <span class="nav-icon material-icons">monitoring</span>
+                <span class="nav-icon fas fa-chart-line"></span>
                 <span class="nav-text">Data</span>
             </button>
             <button data-section="cart" aria-label="Shopping cart">
-                <span class="nav-icon material-icons">shopping_cart</span>
+                <span class="nav-icon fas fa-shopping-cart"></span>
                 <span class="nav-text">Cart</span>
                 <span class="cart-badge" aria-hidden="true"></span>
             </button>
@@ -52,6 +52,14 @@ export default class EsiroNav extends HTMLElement {
                 z-index: 1000;
                 background-color: var(--header-background); /* Use shared variable for header and nav */
                 box-sizing: border-box;
+                align-items: flex-start; /* Align buttons compactly at the top */
+            }
+
+            nav {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start; /* Align buttons compactly at the top */
+                padding: 10px; /* Add padding for better spacing */
             }
 
             /* Large screens: Side rail */
@@ -74,16 +82,17 @@ export default class EsiroNav extends HTMLElement {
                 }
 
                 nav button {
+                    height: 40px; /* Set a fixed height for buttons */
+                    padding: 8px 12px; /* Adjust padding for better spacing */
                     display: flex;
                     align-items: center;
-                    justify-content: flex-start; /* Align content to the left */
-                    gap: 8px; /* Ensure consistent spacing between icon and text */
-                    padding: 12px 16px;
+                    justify-content: flex-start;
+                    gap: 8px;
                     border: none;
                     background: transparent;
                     color: var(--text-primary);
                     cursor: pointer;
-                    text-align: left; /* Align text to the left */
+                    text-align: left;
                     width: 100%;
                     transition: background-color 0.3s ease, color 0.3s ease;
                 }
@@ -123,13 +132,28 @@ export default class EsiroNav extends HTMLElement {
                     flex-direction: column;
                     align-items: center;
                     justify-content: center;
-                    flex: 1;
                     border: none;
                     background: transparent;
                     color: var(--text-primary);
                     cursor: pointer;
                     gap: 4px;
                     text-align: center;
+                    transition: background-color 0.3s ease, color 0.3s ease;
+                }
+
+                nav button {
+                    height: 40px; /* Maintain compact height */
+                    padding: 8px 12px; /* Adjust padding for better spacing */
+                    display: flex;
+                    align-items: center;
+                    justify-content: flex-start;
+                    gap: 8px;
+                    border: none;
+                    background: transparent;
+                    color: var(--text-primary);
+                    cursor: pointer;
+                    text-align: left;
+                    width: 100%;
                     transition: background-color 0.3s ease, color 0.3s ease;
                 }
 
@@ -147,6 +171,24 @@ export default class EsiroNav extends HTMLElement {
                 .nav-text {
                     font-size: 0.8rem;
                 }
+            }
+
+            // Adjust button alignment to line up on the left
+            nav button {
+                justify-content: flex-start; /* Align buttons to the left */
+                text-align: left; /* Ensure text aligns to the left */
+                padding-left: 16px; /* Add padding for better spacing */
+            }
+
+            // Ensure buttons are properly aligned to the left
+            nav button {
+                display: flex;
+                align-items: center;
+                justify-content: flex-start; /* Align content to the left */
+                text-align: left; /* Align text to the left */
+                padding-left: 16px; /* Add padding for spacing */
+                width: 100%; /* Ensure buttons take full width */
+                box-sizing: border-box; /* Include padding in width calculation */
             }
         </style>`;
     }
