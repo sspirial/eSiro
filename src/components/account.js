@@ -1,6 +1,7 @@
 import { AuthService } from '../services/auth.js';
 import { ProductService } from '../services/products.js';
 import { RouterService } from '../services/router.js';
+import { db } from '../db.js';
 
 export default class EsiroAccount extends HTMLElement {
     connectedCallback() {
@@ -24,6 +25,107 @@ export default class EsiroAccount extends HTMLElement {
                         .error-message {
                             color: red;
                             font-weight: bold;
+                        }
+                        .success-message {
+                            color: green;
+                            font-weight: bold;
+                        }
+                        .account-details {
+                            margin-bottom: 30px;
+                            padding: 20px;
+                            background-color: var(--background);
+                            border-radius: var(--border-radius);
+                            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                        }
+                        .vendor-section {
+                            margin-top: 30px;
+                            padding: 20px;
+                            background-color: var(--background);
+                            border-radius: var(--border-radius);
+                            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                        }
+                        .become-vendor-section {
+                            margin-top: 30px;
+                            padding: 20px;
+                            background-color: var(--background);
+                            border-radius: var(--border-radius);
+                            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                            text-align: center;
+                        }
+                        .become-vendor-btn {
+                            background-color: var(--primary-accent);
+                            color: white;
+                            padding: 12px 24px;
+                            border: none;
+                            border-radius: var(--border-radius);
+                            cursor: pointer;
+                            font-size: 16px;
+                            font-weight: bold;
+                            transition: background-color 0.3s ease;
+                        }
+                        .become-vendor-btn:hover {
+                            background-color: var(--primary-accent-dark, #0056b3);
+                        }
+                        .product-form {
+                            display: flex;
+                            flex-direction: column;
+                            gap: 10px;
+                            margin-top: 15px;
+                        }
+                        .product-form input, 
+                        .product-form textarea, 
+                        .product-form select {
+                            padding: 8px;
+                            border: 1px solid #ccc;
+                            border-radius: var(--border-radius);
+                        }
+                        .product-form button {
+                            padding: 10px;
+                            background-color: var(--primary-accent);
+                            color: white;
+                            border: none;
+                            border-radius: var(--border-radius);
+                            cursor: pointer;
+                        }
+                        .products-list {
+                            margin-top: 20px;
+                        }
+                        .product-item {
+                            padding: 15px;
+                            margin-bottom: 15px;
+                            border: 1px solid #eee;
+                            border-radius: var(--border-radius);
+                        }
+                        .product-actions {
+                            margin-top: 10px;
+                            display: flex;
+                            gap: 10px;
+                        }
+                        .product-actions button {
+                            padding: 5px 10px;
+                            background-color: var(--background);
+                            border: 1px solid #ccc;
+                            border-radius: var(--border-radius);
+                            cursor: pointer;
+                        }
+                        .edit-product-btn {
+                            color: var(--primary-accent);
+                        }
+                        .delete-product-btn {
+                            color: #dc3545;
+                        }
+                        .hidden {
+                            display: none;
+                        }
+                        .edit-form {
+                            margin-top: 15px;
+                            padding-top: 15px;
+                            border-top: 1px solid #eee;
+                        }
+                        .edit-product-form {
+                            display: flex;
+                            flex-direction: column;
+                            gap: 10px;
                         }
                     </style>
                 </div>`;
@@ -51,12 +153,23 @@ export default class EsiroAccount extends HTMLElement {
         return `
             <div class="account-details">
                 <h2>Account Details</h2>
-                <p>Name: ${user.name}</p>
-                <p>Email: ${user.email}</p>
+                <p>Name: ${user.name || 'User'}</p>
+                <p>Email: ${user.email || 'user@example.com'}</p>
                 <p>Role: ${user.role || 'buyer'}</p>
-                <button id="logout">Logout</button>
+                <button id="logout" class="logout-btn">Logout</button>
             </div>
-            ${user.role === 'vendor' ? this.renderVendorSection(user) : ''}`;
+            ${user.role === 'vendor' 
+                ? this.renderVendorSection(user) 
+                : this.renderBecomeVendorSection()}`;
+    }
+
+    renderBecomeVendorSection() {
+        return `
+            <div class="become-vendor-section">
+                <h2>Become a Vendor</h2>
+                <p>Want to sell products on our platform? Become a vendor today!</p>
+                <button id="become-vendor-btn" class="become-vendor-btn">Become a Vendor</button>
+            </div>`;
     }
 
     renderVendorSection(user) {
@@ -70,7 +183,7 @@ export default class EsiroAccount extends HTMLElement {
                     <input type="text" name="name" placeholder="Product Name" required>
                     <textarea name="description" placeholder="Product Description" required></textarea>
                     <input type="number" name="price" placeholder="Price" min="0" step="0.01" required>
-                    <input type="text" name="imageUrl" placeholder="Image URL (optional)">
+                    <input type="text" name="image" placeholder="Image URL (optional)">
                     <select name="category" required>
                         <option value="">Select Category</option>
                         <option value="electronics">Electronics</option>
@@ -106,6 +219,7 @@ export default class EsiroAccount extends HTMLElement {
         const loginForm = this.querySelector('#loginForm');
         const logoutBtn = this.querySelector('#logout');
         const addProductForm = this.querySelector('#addProductForm');
+        const becomeVendorBtn = this.querySelector('#become-vendor-btn');
 
         if (loginForm) {
             loginForm.addEventListener('submit', (e) => {
@@ -128,7 +242,7 @@ export default class EsiroAccount extends HTMLElement {
                     name: addProductForm.name.value.trim(),
                     description: addProductForm.description.value.trim(),
                     price: parseFloat(addProductForm.price.value),
-                    imageUrl: addProductForm.imageUrl.value.trim() || null,
+                    image: addProductForm.image.value.trim() || 'https://via.placeholder.com/150',
                     category: addProductForm.category.value,
                     stock: parseInt(addProductForm.stock.value),
                     createdAt: new Date().toISOString()
@@ -137,6 +251,101 @@ export default class EsiroAccount extends HTMLElement {
                 await this.addProduct(productData);
             });
         }
+
+        if (becomeVendorBtn) {
+            becomeVendorBtn.addEventListener('click', async () => {
+                await this.handleBecomeVendor();
+            });
+        }
+    }
+
+    async handleBecomeVendor() {
+        try {
+            const user = AuthService.getUser();
+            if (!user) {
+                throw new Error('You must be logged in to become a vendor');
+            }
+
+            // 1. Change user role to seller/vendor
+            await this.updateUserRole(user.id, 'vendor');
+
+            // 2. Create a new store (public realm) in the database
+            const storeId = await this.createStore(user);
+
+            // 3. Show success message and redirect to vendor dashboard
+            this.showNotification('Congratulations! You are now a vendor.');
+            
+            // 4. Refresh the page to show vendor dashboard
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } catch (error) {
+            console.error('Error becoming vendor:', error);
+            this.showNotification(`Error: ${error.message}`, 'error');
+        }
+    }
+
+    async updateUserRole(userId, role) {
+        try {
+            await db.open();
+            const user = await db.users.get(userId);
+            
+            if (!user) {
+                throw new Error('User not found');
+            }
+
+            // Update user role
+            user.role = role;
+            await db.users.put(user);
+
+            // Update local user in AuthService
+            AuthService.updateCurrentUser(user);
+
+            return true;
+        } catch (error) {
+            console.error('Error updating user role:', error);
+            throw error;
+        }
+    }
+
+    async createStore(user) {
+        try {
+            await db.open();
+            
+            // Create a new store
+            const storeId = crypto.randomUUID();
+            const store = {
+                id: storeId,
+                name: `${user.name || 'User'}'s Store`,
+                description: `Welcome to ${user.name || 'User'}'s Store!`,
+                image: 'https://via.placeholder.com/300',
+                ownerId: user.id,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                productCount: 0
+            };
+
+            await db.stores.add(store);
+            return storeId;
+        } catch (error) {
+            console.error('Error creating store:', error);
+            throw error;
+        }
+    }
+
+    showNotification(message, type = 'success') {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+        notification.setAttribute('role', 'alert');
+        
+        document.body.appendChild(notification);
+        
+        // Auto-remove after 3 seconds
+        setTimeout(() => {
+            notification.classList.add('fade-out');
+            setTimeout(() => notification.remove(), 500);
+        }, 3000);
     }
 
     async addProduct(productData) {
@@ -144,16 +353,41 @@ export default class EsiroAccount extends HTMLElement {
         messageDiv.innerHTML = '<p>Adding product...</p>';
         
         try {
-            const productId = await ProductService.addProduct(productData);
+            await db.open();
+            const user = AuthService.getUser();
             
-            if (productId) {
-                messageDiv.innerHTML = '<p class="success-message">Product added successfully!</p>';
-                this.querySelector('#addProductForm').reset();
-                this.loadVendorProducts(); // Refresh the products list
-            } else {
-                messageDiv.innerHTML = '<p class="error-message">Failed to add product</p>';
+            if (!user || user.role !== 'vendor') {
+                throw new Error('Only vendors can add products');
             }
+            
+            // Get the user's store
+            const store = await db.stores.where('ownerId').equals(user.id).first();
+            
+            if (!store) {
+                throw new Error('Store not found');
+            }
+            
+            // Add product to database
+            const productId = crypto.randomUUID();
+            const product = {
+                id: productId,
+                ...productData,
+                vendorId: store.id,
+                ownerId: user.id
+            };
+            
+            await db.products.add(product);
+            
+            // Update store product count
+            store.productCount = (store.productCount || 0) + 1;
+            store.updatedAt = new Date().toISOString();
+            await db.stores.put(store);
+            
+            messageDiv.innerHTML = '<p class="success-message">Product added successfully!</p>';
+            this.querySelector('#addProductForm').reset();
+            this.loadVendorProducts(); // Refresh the products list
         } catch (error) {
+            console.error('Add product error:', error);
             messageDiv.innerHTML = `<p class="error-message">Error: ${error.message}</p>`;
         }
     }
@@ -162,7 +396,22 @@ export default class EsiroAccount extends HTMLElement {
         const productsDiv = this.querySelector('#vendorProducts');
         
         try {
-            const products = await ProductService.getMyProducts();
+            await db.open();
+            const user = AuthService.getUser();
+            
+            if (!user || user.role !== 'vendor') {
+                throw new Error('Only vendors can access their products');
+            }
+            
+            // Get the user's store
+            const store = await db.stores.where('ownerId').equals(user.id).first();
+            
+            if (!store) {
+                throw new Error('Store not found');
+            }
+            
+            // Get products for this store
+            const products = await db.products.where('vendorId').equals(store.id).toArray();
             
             if (products.length === 0) {
                 productsDiv.innerHTML = '<p>You don\'t have any products yet.</p>';
@@ -187,7 +436,7 @@ export default class EsiroAccount extends HTMLElement {
                                 <input type="text" name="name" value="${product.name}" required>
                                 <textarea name="description" required>${product.description}</textarea>
                                 <input type="number" name="price" value="${product.price}" min="0" step="0.01" required>
-                                <input type="text" name="imageUrl" value="${product.imageUrl || ''}">
+                                <input type="text" name="image" value="${product.image || ''}">
                                 <select name="category" required>
                                     <option value="electronics" ${product.category === 'electronics' ? 'selected' : ''}>Electronics</option>
                                     <option value="clothing" ${product.category === 'clothing' ? 'selected' : ''}>Clothing</option>
@@ -209,6 +458,7 @@ export default class EsiroAccount extends HTMLElement {
             this.setupProductEventListeners();
             
         } catch (error) {
+            console.error('Error loading products:', error);
             productsDiv.innerHTML = `<p class="error-message">Error loading products: ${error.message}</p>`;
         }
     }
@@ -245,9 +495,10 @@ export default class EsiroAccount extends HTMLElement {
                     name: form.name.value.trim(),
                     description: form.description.value.trim(),
                     price: parseFloat(form.price.value),
-                    imageUrl: form.imageUrl.value.trim() || null,
+                    image: form.image.value.trim() || 'https://via.placeholder.com/150',
                     category: form.category.value,
-                    stock: parseInt(form.stock.value)
+                    stock: parseInt(form.stock.value),
+                    updatedAt: new Date().toISOString()
                 };
                 
                 await this.updateProduct(productId, productData);
@@ -272,15 +523,26 @@ export default class EsiroAccount extends HTMLElement {
         messageDiv.innerHTML = '<p>Updating product...</p>';
         
         try {
-            const result = await ProductService.updateProduct(productId, productData);
+            await db.open();
+            const user = AuthService.getUser();
             
-            if (result) {
-                messageDiv.innerHTML = '<p class="success-message">Product updated successfully!</p>';
-                this.loadVendorProducts(); // Refresh the products list
-            } else {
-                messageDiv.innerHTML = '<p class="error-message">Failed to update product</p>';
+            if (!user || user.role !== 'vendor') {
+                throw new Error('Only vendors can update products');
             }
+            
+            // Verify product ownership
+            const product = await db.products.get(productId);
+            if (!product || product.ownerId !== user.id) {
+                throw new Error('Product not found or you don\'t have permission to update it');
+            }
+            
+            // Update the product
+            await db.products.update(productId, productData);
+            
+            messageDiv.innerHTML = '<p class="success-message">Product updated successfully!</p>';
+            this.loadVendorProducts(); // Refresh the products list
         } catch (error) {
+            console.error('Update product error:', error);
             messageDiv.innerHTML = `<p class="error-message">Error: ${error.message}</p>`;
         }
     }
@@ -290,15 +552,36 @@ export default class EsiroAccount extends HTMLElement {
         messageDiv.innerHTML = '<p>Deleting product...</p>';
         
         try {
-            const result = await ProductService.deleteProduct(productId);
+            await db.open();
+            const user = AuthService.getUser();
             
-            if (result) {
-                messageDiv.innerHTML = '<p class="success-message">Product deleted successfully!</p>';
-                this.loadVendorProducts(); // Refresh the products list
-            } else {
-                messageDiv.innerHTML = '<p class="error-message">Failed to delete product</p>';
+            if (!user || user.role !== 'vendor') {
+                throw new Error('Only vendors can delete products');
             }
+            
+            // Verify product ownership
+            const product = await db.products.get(productId);
+            if (!product || product.ownerId !== user.id) {
+                throw new Error('Product not found or you don\'t have permission to delete it');
+            }
+            
+            // Get the user's store to update product count
+            const store = await db.stores.where('ownerId').equals(user.id).first();
+            
+            // Delete the product
+            await db.products.delete(productId);
+            
+            // Update store product count
+            if (store) {
+                store.productCount = Math.max((store.productCount || 0) - 1, 0);
+                store.updatedAt = new Date().toISOString();
+                await db.stores.put(store);
+            }
+            
+            messageDiv.innerHTML = '<p class="success-message">Product deleted successfully!</p>';
+            this.loadVendorProducts(); // Refresh the products list
         } catch (error) {
+            console.error('Delete product error:', error);
             messageDiv.innerHTML = `<p class="error-message">Error: ${error.message}</p>`;
         }
     }

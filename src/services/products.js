@@ -42,6 +42,21 @@ export class ProductService {
     }
     
     /**
+     * Get products for display in the UI
+     * This is an alias for getAllProducts with default options
+     * @returns {Promise<Array>} List of products
+     */
+    static async getProducts() {
+        try {
+            await db.open(); // Ensure database is open
+            return await db.products.toArray();
+        } catch (error) {
+            console.error('Get products error:', error);
+            return [];
+        }
+    }
+    
+    /**
      * Get a single product by ID
      * @param {string} productId - Product ID
      * @returns {Promise<Object|null>} Product object or null if not found
